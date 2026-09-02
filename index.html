@@ -358,6 +358,179 @@
       html { scroll-behavior: auto; }
       *, *::before, *::after { transition-duration: .01ms !important; animation-duration: .01ms !important; }
     }
+
+    /* Slider Styles */
+    .slider-section {
+      background: var(--sand);
+      padding: 80px 0;
+      border-radius: 32px;
+      margin-bottom: 80px;
+    }
+    .slider-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+      margin-bottom: 40px;
+      padding: 0 5%;
+    }
+    .slider-nav {
+      display: flex;
+      gap: 12px;
+    }
+    .slider-btn {
+      background: var(--paper);
+      border: 1px solid var(--line);
+      width: 48px;
+      height: 48px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      color: var(--pine);
+      transition: all 0.2s ease;
+    }
+    .slider-btn:hover, .slider-btn:focus-visible {
+      background: var(--pine);
+      color: var(--paper);
+      border-color: var(--pine);
+      outline: none;
+    }
+    .slider-track {
+      display: flex;
+      gap: 24px;
+      overflow-x: auto;
+      scroll-snap-type: x mandatory;
+      padding: 0 5% 32px;
+      scrollbar-width: none; /* Firefox */
+      -ms-overflow-style: none; /* IE/Edge */
+      scroll-behavior: smooth;
+    }
+    .slider-track::-webkit-scrollbar {
+      display: none; /* Chrome/Safari */
+    }
+    .slider-item {
+      flex: 0 0 calc(100% - 24px);
+      scroll-snap-align: center;
+      background: var(--paper);
+      border: 1px solid var(--line);
+      border-radius: 24px;
+      padding: 32px;
+      display: flex;
+      flex-direction: column;
+    }
+    @media (min-width: 640px) {
+      .slider-item {
+        flex: 0 0 calc(50% - 24px);
+      }
+    }
+    @media (min-width: 900px) {
+      .slider-item {
+        flex: 0 0 420px;
+        scroll-snap-align: start;
+      }
+      .slider-header {
+        padding: 0;
+      }
+      .slider-track {
+        padding: 0 0 32px 0;
+      }
+      .slider-section.container-bleed {
+        background: transparent;
+        padding: 0;
+      }
+      .slider-section.container-bleed .slider-track {
+        padding-bottom: 24px;
+      }
+    }
+    /* Testimonial Specific */
+    .testi-quote {
+      font-size: 1.125rem;
+      line-height: 1.6;
+      color: var(--pine-deep);
+      margin-bottom: 24px;
+      flex-grow: 1;
+    }
+    .testi-quote::before {
+      content: '"';
+      color: var(--gold);
+      font-family: 'DM Serif Display', serif;
+      font-size: 2.5rem;
+      line-height: 0.5;
+      margin-right: 8px;
+      vertical-align: -0.2em;
+    }
+    .testi-author {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      margin-top: auto;
+    }
+    .testi-avatar {
+      width: 52px;
+      height: 52px;
+      border-radius: 50%;
+      background: var(--pine-light);
+      color: var(--paper);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 600;
+      font-size: 1.25rem;
+      flex-shrink: 0;
+      object-fit: cover;
+    }
+    .testi-author-info strong {
+      display: block;
+      color: var(--pine-deep);
+      margin-bottom: 2px;
+      font-size: 1.05rem;
+    }
+    .testi-author-info span {
+      display: block;
+      font-size: 0.85rem;
+      color: var(--muted);
+    }
+    /* Bio Specific */
+    .bio-item {
+      padding: 32px;
+    }
+    .bio-header {
+      display: flex;
+      align-items: center;
+      gap: 20px;
+      margin-bottom: 24px;
+    }
+    .bio-image {
+      width: 72px;
+      height: 72px;
+      border-radius: 50%;
+      object-fit: cover;
+      background: var(--line);
+      border: 2px solid var(--sand);
+    }
+    .bio-info strong {
+      display: block;
+      color: var(--pine-deep);
+      font-size: 1.2rem;
+      line-height: 1.2;
+    }
+    .bio-info span {
+      display: inline-block;
+      font-size: 0.8rem;
+      color: var(--pine);
+      background: var(--sand);
+      padding: 4px 10px;
+      border-radius: 20px;
+      font-weight: 500;
+      margin-top: 8px;
+    }
+    .bio-text {
+      color: var(--muted);
+      font-size: 0.95rem;
+      line-height: 1.6;
+    }
+
   </style>
 </head>
 <body>
@@ -477,6 +650,131 @@
             <div class="unit-seal" aria-hidden="true">RTQ</div><h3>RTQ Darussolah</h3><p>Rumah tahfidz yang mendampingi hafalan, murojaah, dan kedekatan anak dengan Al-Quran.</p>
             <div class="unit-tags"><span class="unit-tag">Tahfidz</span><span class="unit-tag">Murojaah</span><span class="unit-tag">Adab</span></div>
             <button class="unit-link" type="button" data-open="admission" data-unit="RTQ Darussolah">Pilih program <span class="arrow">&#8594;</span></button>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    
+    <!-- Slider Biografi Guru -->
+    <section class="section slider-section container-bleed" id="guru" aria-label="Biografi Guru">
+      <div class="container">
+        <div class="slider-header">
+          <div>
+            <span class="eyebrow">Asatidz dan Asatidzah</span>
+            <h2>Belajar dari guru yang peduli.</h2>
+          </div>
+          <div class="slider-nav">
+            <button class="slider-btn" type="button" aria-label="Geser ke kiri" onclick="document.getElementById('guru-track').scrollBy({left: -350, behavior: 'smooth'})">&larr;</button>
+            <button class="slider-btn" type="button" aria-label="Geser ke kanan" onclick="document.getElementById('guru-track').scrollBy({left: 350, behavior: 'smooth'})">&rarr;</button>
+          </div>
+        </div>
+        <div class="slider-track" id="guru-track">
+          <!-- Item 1 -->
+          <article class="slider-item bio-item">
+            <div class="bio-header">
+              <img src="https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=150&q=80" alt="Ustadzah Nisa" class="bio-image" loading="lazy">
+              <div class="bio-info">
+                <strong class="bio-name">Ustadzah Nisa</strong>
+                <span class="bio-unit">TPQ Darul Jinan</span>
+              </div>
+            </div>
+            <p class="bio-text">Lulusan S1 Pendidikan Agama Islam. Sabar dan telaten dalam mendampingi tahsin santri usia dini, menciptakan suasana kelas yang menyenangkan.</p>
+          </article>
+          <!-- Item 2 -->
+          <article class="slider-item bio-item">
+            <div class="bio-header">
+              <img src="https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?auto=format&fit=crop&w=150&q=80" alt="Ustadz Ahmad Rasyid" class="bio-image" loading="lazy">
+              <div class="bio-info">
+                <strong class="bio-name">Ustadz Ahmad Rasyid</strong>
+                <span class="bio-unit">MDT Darussolah</span>
+              </div>
+            </div>
+            <p class="bio-text">Berpengalaman lebih dari 6 tahun mengajar Diniyah. Pendekatan diskusinya membuat santri lebih mudah memahami dasar-dasar Fiqih dan Akhlak.</p>
+          </article>
+          <!-- Item 3 -->
+          <article class="slider-item bio-item">
+            <div class="bio-header">
+              <img src="https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=150&q=80" alt="Ustadzah Laila Fitria" class="bio-image" loading="lazy">
+              <div class="bio-info">
+                <strong class="bio-name">Ustadzah Laila Fitria</strong>
+                <span class="bio-unit">RA Darussolah</span>
+              </div>
+            </div>
+            <p class="bio-text">Tersertifikasi metode pengajaran anak usia dini. Sangat dekat dengan santri dan mahir memadukan nilai Islam dengan kegiatan bermain edukatif.</p>
+          </article>
+          <!-- Item 4 -->
+          <article class="slider-item bio-item">
+            <div class="bio-header">
+              <img src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=150&q=80" alt="Ustadz Fikri Hidayat" class="bio-image" loading="lazy">
+              <div class="bio-info">
+                <strong class="bio-name">Ustadz Fikri Hidayat</strong>
+                <span class="bio-unit">RTQ Darussolah</span>
+              </div>
+            </div>
+            <p class="bio-text">Alumni pesantren salaf dengan hafalan mutqin. Ketegasannya diimbangi dengan kehangatan saat memotivasi santri mengulang (murojaah) hafalan.</p>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <!-- Slider Testimoni -->
+    <section class="section slider-section container-bleed" id="testimoni" aria-label="Testimoni" style="background: var(--paper); border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); border-radius: 0;">
+      <div class="container">
+        <div class="slider-header">
+          <div>
+            <span class="eyebrow">Kisah sukses & cerita</span>
+            <h2>Apa kata keluarga santri?</h2>
+          </div>
+          <div class="slider-nav">
+            <button class="slider-btn" type="button" aria-label="Geser ke kiri" onclick="document.getElementById('testi-track').scrollBy({left: -350, behavior: 'smooth'})">&larr;</button>
+            <button class="slider-btn" type="button" aria-label="Geser ke kanan" onclick="document.getElementById('testi-track').scrollBy({left: 350, behavior: 'smooth'})">&rarr;</button>
+          </div>
+        </div>
+        <div class="slider-track" id="testi-track">
+          <!-- Item 1 -->
+          <article class="slider-item">
+            <p class="testi-quote">Sejak mengaji di TPQ, anak saya jadi lebih mandiri dan berani tampil. Ustadzahnya sangat telaten.</p>
+            <div class="testi-author">
+              <div class="testi-avatar">B</div>
+              <div class="testi-author-info">
+                <strong class="testi-name">Bunda Aisyah</strong>
+                <span class="testi-role">Wali Santri TPQ</span>
+              </div>
+            </div>
+          </article>
+          <!-- Item 2 -->
+          <article class="slider-item">
+            <p class="testi-quote">Saya sangat terbantu dengan adanya portal keluarga. Bisa memantau perkembangan tahfidz tanpa harus ke pondok tiap hari.</p>
+            <div class="testi-author">
+              <div class="testi-avatar">A</div>
+              <div class="testi-author-info">
+                <strong class="testi-name">Ayah Fatih</strong>
+                <span class="testi-role">Wali Santri RTQ</span>
+              </div>
+            </div>
+          </article>
+          <!-- Item 3 -->
+          <article class="slider-item">
+            <p class="testi-quote">Belajar di RA membuat putri kami lebih mudah bergaul dan rajin merapikan mainannya sendiri.</p>
+            <div class="testi-author">
+              <div class="testi-avatar">M</div>
+              <div class="testi-author-info">
+                <strong class="testi-name">Mama Kikan</strong>
+                <span class="testi-role">Wali Santri RA</span>
+              </div>
+            </div>
+          </article>
+          <!-- Item 4 -->
+          <article class="slider-item">
+            <p class="testi-quote">Diniyah di sini tidak membosankan. Anak-anak diajak diskusi dan lebih paham adab harian.</p>
+            <div class="testi-author">
+              <div class="testi-avatar">P</div>
+              <div class="testi-author-info">
+                <strong class="testi-name">Pak Ridwan</strong>
+                <span class="testi-role">Wali Santri MDT</span>
+              </div>
+            </div>
           </article>
         </div>
       </div>
@@ -756,5 +1054,6 @@
     if ('serviceWorker' in navigator) navigator.serviceWorker.register('service-worker.js').catch(error => console.warn('PWA belum aktif:', error.message));
     loadPublicData();
   </script>
+  <script src="editor.js"></script>
 </body>
 </html>

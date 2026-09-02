@@ -9,7 +9,7 @@
     <meta name="darussolah-supabase-anon-key" content="" />
     <title>Masuk Portal | TPQ Darul Jinan</title>
     <script src="darussolah-config.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.57.4/dist/umd/supabase.min.js" integrity="sha384-AkNSQdptcXlJ0/NBZc4qGk86cDVXcCevwoWgEKIpHOEfbvlXGLlIkimQtONt8KNf" crossorigin="anonymous"></script>
+  
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=DM+Serif+Display&display=swap" rel="stylesheet" />
@@ -166,199 +166,144 @@
           <button class="role-option" type="button" data-role="guru" aria-pressed="false"><span class="role-icon">&#9998;</span><span class="role-name">Guru / ustadz</span></button>
           <button class="role-option" type="button" data-role="admin" aria-pressed="false"><span class="role-icon">&#9881;</span><span class="role-name">Admin</span></button>
         </div></div>
-        <form class="login-form" id="login-form">
-          <input type="hidden" id="role" name="role" value="wali" />
-          <div class="field"><label for="identity">Email atau nomor WhatsApp</label><input id="identity" name="identity" type="text" placeholder="Masukkan email atau nomor HP" autocomplete="username" required /></div>
-          <div class="field"><label for="password">Kata sandi</label><div class="password-wrap"><input id="password" name="password" type="password" placeholder="Masukkan kata sandi" autocomplete="current-password" required /><button class="show-password" id="toggle-password" type="button" aria-label="Tampilkan kata sandi">Lihat</button></div></div>
-          <div class="form-row"><label class="remember"><input type="checkbox" name="remember" /> Ingat perangkat ini</label><a class="forgot" href="#bantuan">Lupa kata sandi?</a></div>
-          <button class="btn btn-primary login-btn" id="login-button" type="submit">Masuk ke portal <span class="arrow">&nearr;</span></button>
-          <p class="auth-helper" id="role-helper">Wali santri dapat melihat ringkasan semua anak yang terhubung.</p>
-          <div class="auth-message" id="auth-message" role="status" aria-live="polite"><strong>Antarmuka login siap.</strong><span>Integrasi akun akan dihubungkan ke Supabase Auth pada tahap implementasi.</span></div>
-        </form>
+        
+<form class="login-form" id="login-form">
+  <input type="hidden" id="role" name="role" value="wali" />
+  
+  <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 20px 0;">
+    <button type="button" class="gsi-material-button" id="google-login-btn" style="background-color: #fff; border: 1px solid #dadce0; border-radius: 4px; box-sizing: border-box; color: #3c4043; cursor: pointer; display: inline-block; font-family: Roboto, arial, sans-serif; font-size: 14px; font-weight: 500; letter-spacing: 0.25px; outline: none; padding: 0 12px; position: relative; transition: background-color .218s, border-color .218s, box-shadow .218s; vertical-align: middle; white-space: nowrap; width: 100%; max-width: 400px; min-width: min-content; height: 40px;">
+      <div style="align-items: center; display: flex; flex-direction: row; flex-wrap: nowrap; height: 100%; justify-content: center; position: relative; width: 100%;">
+        <div style="height: 20px; margin-right: 12px; min-width: 20px; width: 20px;">
+          <svg version="1.1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" xmlns:xlink="http://www.w3.org/1999/xlink" style="display: block;">
+            <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"></path>
+            <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"></path>
+            <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"></path>
+            <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"></path>
+            <path fill="none" d="M0 0h48v48H0z"></path>
+          </svg>
+        </div>
+        <span style="font-family: Roboto, arial, sans-serif; font-weight: 500; overflow: hidden; text-overflow: ellipsis; vertical-align: top;">Sign in with Google</span>
+      </div>
+    </button>
+  </div>
+  
+  <p class="auth-helper" id="role-helper" style="text-align: center;">Pilih peran Anda dan masuk dengan akun Google.</p>
+  <div class="auth-message" id="auth-message" role="status" aria-live="polite"><strong>Antarmuka login siap.</strong></div>
+</form>
+
         <div class="aux-card" id="bantuan"><p><strong>Belum punya akses?</strong>Hubungi admin lembaga untuk aktivasi akun.</p><a class="aux-link" href="index.html#ppdb">Tanya admin <span>&rarr;</span></a></div>
         <p class="privacy-note">Dengan melanjutkan, Anda memahami bahwa data akun digunakan sesuai kebutuhan layanan pendidikan. Baca ringkasan <a href="index.html#faq">informasi privasi</a> kami.</p>
       </div>
     </section>
   </main>
-  <script>
-    (() => {
-      const roleButtons = [...document.querySelectorAll('[data-role]')];
-      const roleInput = document.querySelector('#role');
-      const helper = document.querySelector('#role-helper');
-      const loginButton = document.querySelector('#login-button');
-      const message = document.querySelector('#auth-message');
-      const loginForm = document.querySelector('#login-form');
-      const passwordInput = document.querySelector('#password');
-      const togglePassword = document.querySelector('#toggle-password');
-       const config = window.DARUSSOLAH_CONFIG || {};
-       const apiBase = String(config.apiBase || '').replace(/\/+$/, '');
-       const supabaseUrl = String(config.supabaseUrl || document.querySelector('meta[name="darussolah-supabase-url"]')?.content.trim() || '').replace(/\/+$/, '');
-       const supabaseAnonKey = String(config.supabaseAnonKey || document.querySelector('meta[name="darussolah-supabase-anon-key"]')?.content.trim() || '');
-       const tenantSlug = String(config.tenantSlug || 'yayasan-darussolah-wal-jinan').trim();
-       const configuredFields = [apiBase, supabaseUrl, supabaseAnonKey].filter(Boolean);
-       const partiallyConfigured = configuredFields.length > 0 && configuredFields.length < 3;
-        const rememberInput = loginForm.elements.remember;
-        const sessionModeKey = 'dwj-session-mode';
-        const safeStorage = (name) => { try { return window[name]; } catch (error) { return null; } };
-        const createAuthClient = storage => window.supabase.createClient(supabaseUrl, supabaseAnonKey, { auth: { persistSession: true, storage } });
-       const roleContent = {
-         wali: { helper: 'Wali santri dapat melihat ringkasan semua anak yang terhubung.', button: 'Masuk ke portal' },
-         guru: { helper: 'Guru dapat mengelola kehadiran, materi, tugas, dan catatan perkembangan.', button: 'Masuk ke ruang guru' },
-         admin: { helper: 'Admin lembaga mengelola data sesuai unit dan hak aksesnya.', button: 'Masuk ke panel admin' }
-       };
-       const selectRole = (role) => {
-         roleInput.value = role;
-         roleButtons.forEach((item) => item.setAttribute('aria-pressed', String(item.dataset.role === role)));
-         helper.textContent = roleContent[role].helper;
-         loginButton.innerHTML = `${roleContent[role].button} <span class="arrow">&nearr;</span>`;
-       };
-        const roleDestinations = { wali: 'wali.html', guru: 'absensi.html', admin: 'keuangan.html' };
-       const allowedRedirects = new Set(['wali.html', 'absensi.html', 'materi.html', 'tahfidz.html', 'nilai.html', 'keuangan.html', 'kepegawaian.html', 'notifikasi.html', 'pengaturan.html', 'analitik.html', 'cms.html', 'santri.html']);
-        const requestedRedirect = new URLSearchParams(window.location.search).get('redirect') || '';
-        const redirectTarget = (() => { try { const url = new URL(requestedRedirect, window.location.href); const path = url.pathname.split('/').pop(); return url.origin === window.location.origin && allowedRedirects.has(path) ? `${path}${url.search}` : ''; } catch (error) { return ''; } })();
-        const wait = milliseconds => new Promise(resolve => window.setTimeout(resolve, milliseconds));
-        const retryableStatus = status => [408, 425, 429].includes(status) || status >= 500;
-        const fetchRoles = async accessToken => {
-          let lastError = null;
-          for (let attempt = 0; attempt < 3; attempt += 1) {
-            try {
-              const response = await fetch(`${apiBase}/v1/private/${encodeURIComponent(tenantSlug)}/me`, {
-                headers: { Authorization: `Bearer ${accessToken}` }
-              });
-              const body = await response.json().catch(() => ({}));
-              if (response.ok) return { roles: (body.user?.roles || []).map(role => String(role)), error: null };
-              const error = new Error(body.detail || `portal API returned ${response.status}`);
-              if (!retryableStatus(response.status)) return { roles: [], error };
-              lastError = error;
-            } catch (error) {
-              lastError = error;
-            }
-            if (attempt < 2) await wait(250 * (attempt + 1));
-          }
-          return { roles: [], error: lastError || new Error('portal API unavailable') };
-        };
-
-       roleButtons.forEach((button) => {
-         button.addEventListener('click', () => {
-           selectRole(button.dataset.role);
-         });
-       });
-
-      togglePassword.addEventListener('click', () => {
-        const visible = passwordInput.type === 'text';
-        passwordInput.type = visible ? 'password' : 'text';
-        togglePassword.textContent = visible ? 'Lihat' : 'Sembunyikan';
-        togglePassword.setAttribute('aria-label', visible ? 'Tampilkan kata sandi' : 'Sembunyikan kata sandi');
-      });
-
-       document.querySelector('.forgot').addEventListener('click', async (event) => {
-         event.preventDefault();
-         const identity = document.querySelector('#identity').value.trim();
-         if (!identity || !identity.includes('@') || !supabaseUrl || !supabaseAnonKey || !window.supabase) {
-           showAuthMessage('Masukkan email akun.', 'Pemulihan kata sandi memakai email yang terdaftar dan hanya tersedia saat layanan aktif.');
-           return;
-         }
-         try {
-           const recoveryClient = createAuthClient(safeStorage('localStorage'));
-           const { error } = await recoveryClient.auth.resetPasswordForEmail(identity, { redirectTo: `${window.location.origin}/reset-password.html` });
-           if (error) throw error;
-           showAuthMessage('Tautan reset dikirim.', 'Periksa email akun Anda lalu ikuti tautan untuk membuat kata sandi baru.');
-         } catch (error) {
-           showAuthMessage('Reset belum berhasil.', error.message || 'Periksa email dan koneksi Anda.');
-         }
-       });
-
-      const showAuthMessage = (title, copy, link = '') => {
-        const safe = value => String(value).replace(/[&<>"']/g, character => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[character]));
-        message.innerHTML = `<strong>${safe(title)}</strong><span>${safe(copy)}</span>${link}`;
-        message.classList.add('show');
-      };
-
-      loginForm.addEventListener('submit', async (event) => {
-        event.preventDefault();
-         if (!loginForm.reportValidity()) return;
-         loginButton.classList.add('is-loading');
-         if (partiallyConfigured) {
-           loginButton.classList.remove('is-loading');
-           showAuthMessage('Konfigurasi belum lengkap.', 'Isi API URL, Supabase URL, dan anon key di darussolah-config.js sebelum mengaktifkan login production.');
-           return;
-         }
-         if (window.supabase && configuredFields.length === 3) {
-           const remember = Boolean(rememberInput.checked);
-           const storage = safeStorage(remember ? 'localStorage' : 'sessionStorage');
-           const authClient = createAuthClient(storage);
-           const { data, error } = await authClient.auth.signInWithPassword({
-            email: document.querySelector('#identity').value.trim(),
-            password: passwordInput.value
-          });
-          if (error || !data.user) {
-            loginButton.classList.remove('is-loading');
-            showAuthMessage('Login belum berhasil.', error?.message || 'Akun belum dapat diverifikasi.');
-            return;
-          }
-           const accessToken = data.session?.access_token || '';
-            let roles = [];
-            let roleError = null;
-            if (apiBase && accessToken) {
-              ({ roles, error: roleError } = await fetchRoles(accessToken));
-            } else {
-              roleError = new Error('session token unavailable');
-            }
-           let selectedRole = roleInput.value;
-           const allowedRoles = {
-             wali: ['wali'],
-             guru: ['guru'],
-             admin: ['super_admin', 'yayasan_admin', 'lembaga_admin', 'operator_pendaftaran']
-           };
-           const allowed = allowedRoles[selectedRole] || [];
-           const availableRoles = Object.entries(allowedRoles)
-             .filter(([, roleValues]) => roleValues.some(item => roles.includes(item)))
-             .map(([role]) => role);
-             if (roleError || !roles.some(item => allowed.includes(item))) {
-              if (!roleError && availableRoles.length === 1) {
-                selectedRole = availableRoles[0];
-                selectRole(selectedRole);
-              } else {
-              if (roleError) {
-                loginButton.classList.remove('is-loading');
-                showAuthMessage('Koneksi belum stabil.', 'Akun berhasil masuk, tetapi peran belum dapat diverifikasi. Tekan tombol masuk lagi.');
-                return;
-              }
-              await authClient.auth.signOut();
-             loginButton.classList.remove('is-loading');
-             const available = availableRoles.map(role => roleContent[role].button.replace('Masuk ke ', '')).join(', ');
-             showAuthMessage('Peran belum diizinkan.', available ? `Akun ini tersedia untuk: ${available}.` : 'Akun berhasil dikenali, tetapi role belum dapat diverifikasi.');
-             return;
-             }
-           }
-           try {
-             if (remember) {
-               safeStorage('localStorage')?.setItem(sessionModeKey, 'persistent');
-               safeStorage('sessionStorage')?.removeItem(sessionModeKey);
-             } else {
-               safeStorage('sessionStorage')?.setItem(sessionModeKey, 'session');
-               safeStorage('localStorage')?.removeItem(sessionModeKey);
-               [...(safeStorage('localStorage') ? Object.keys(localStorage) : [])]
-                 .filter(key => key.startsWith('sb-') && key.endsWith('-auth-token'))
-                 .forEach(key => localStorage.removeItem(key));
-             }
-            } catch (storageError) { /* Login remains usable when browser storage is unavailable. */ }
-            try {
-              safeStorage('sessionStorage')?.setItem('dwj-ui-role', selectedRole);
-              if (remember) safeStorage('localStorage')?.setItem('dwj-ui-role', selectedRole);
-              else safeStorage('localStorage')?.removeItem('dwj-ui-role');
-            } catch (storageError) { /* Navigation remains usable when role storage is unavailable. */ }
-            loginButton.classList.remove('is-loading');
-            const destination = redirectTarget || roleDestinations[selectedRole];
-           showAuthMessage('Login berhasil.', remember ? 'Sesi akan diingat pada perangkat ini.' : 'Sesi hanya berlaku pada tab ini.', `<a class="portal-link" href="${destination}">Buka portal &rarr;</a>`);
-           return;
-        }
-        window.setTimeout(() => {
-          loginButton.classList.remove('is-loading');
-          showAuthMessage('Pratinjau berhasil.', 'Form login siap dihubungkan ke Supabase Auth sesuai peran akun.', `<a class="portal-link" href="${roleDestinations[roleInput.value]}">Buka pratinjau portal &rarr;</a>`);
-        }, 650);
-      });
-    })();
-  </script>
+  
 </body>
 </html>
+
+  <script type="module">
+    import { initializeApp, getApps, getApp } from 'https://www.gstatic.com/firebasejs/11.0.1/firebase-app.js';
+    import { getAuth, signInWithPopup, GoogleAuthProvider } from 'https://www.gstatic.com/firebasejs/11.0.1/firebase-auth.js';
+
+    const roleButtons = [...document.querySelectorAll('[data-role]')];
+    const roleInput = document.querySelector('#role');
+    const helper = document.querySelector('#role-helper');
+    const message = document.querySelector('#auth-message');
+    const googleLoginBtn = document.querySelector('#google-login-btn');
+
+    const config = window.DARUSSOLAH_CONFIG || {};
+    const apiBase = String(config.apiBase || '').replace(/\/+$/, '');
+    const tenantSlug = String(config.tenantSlug || 'yayasan-darussolah-wal-jinan').trim();
+
+    const safeStorage = (name) => { try { return window[name]; } catch (error) { return null; } };
+
+    const roleContent = {
+      wali: { helper: 'Wali santri dapat melihat ringkasan semua anak yang terhubung.', button: 'Masuk ke portal' },
+      guru: { helper: 'Guru dapat mengelola kehadiran, materi, tugas, dan catatan perkembangan.', button: 'Masuk ke ruang guru' },
+      admin: { helper: 'Admin lembaga mengelola data sesuai unit dan hak aksesnya.', button: 'Masuk ke panel admin' }
+    };
+
+    const selectRole = (role) => {
+      roleInput.value = role;
+      roleButtons.forEach((item) => item.setAttribute('aria-pressed', String(item.dataset.role === role)));
+      helper.textContent = roleContent[role].helper;
+    };
+
+    roleButtons.forEach(btn => {
+      btn.addEventListener('click', () => selectRole(btn.dataset.role));
+    });
+
+    const roleDestinations = { wali: 'wali.html', guru: 'absensi.html', admin: 'keuangan.html' };
+    const allowedRedirects = new Set(['wali.html', 'absensi.html', 'materi.html', 'tahfidz.html', 'nilai.html', 'keuangan.html', 'kepegawaian.html', 'notifikasi.html', 'pengaturan.html', 'analitik.html', 'cms.html', 'santri.html']);
+
+    const requestedRedirect = new URLSearchParams(window.location.search).get('redirect') || '';
+    const redirectTarget = (() => { try { const url = new URL(requestedRedirect, window.location.href); const path = url.pathname.split('/').pop(); return url.origin === window.location.origin && allowedRedirects.has(path) ? `${path}${url.search}` : ''; } catch (error) { return ''; } })();
+
+    const showAuthMessage = (title, copy, link = '') => {
+      const safe = value => String(value).replace(/[&<>"']/g, character => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[character]));
+      message.innerHTML = `<strong>${safe(title)}</strong><span>${safe(copy)}</span>${link}`;
+      message.classList.add('show');
+    };
+
+    let auth, provider;
+    // Pre-initialize Firebase to prevent popup block
+    fetch('/firebase-applet-config.json').then(r => r.json()).then(config => {
+      const app = !getApps().length ? initializeApp(config) : getApp();
+      auth = getAuth(app);
+      provider = new GoogleAuthProvider();
+    }).catch(console.error);
+
+    let isSigningIn = false;
+    googleLoginBtn.addEventListener('click', async () => {
+      if (isSigningIn) return;
+      isSigningIn = true;
+      if (!auth || !provider) {
+         showAuthMessage('Sistem belum siap', 'Harap tunggu sesaat hingga konfigurasi dimuat.');
+         isSigningIn = false;
+         return;
+      }
+      try {
+        const result = await signInWithPopup(auth, provider);
+        const credential = GoogleAuthProvider.credentialFromResult(result);
+        const accessToken = await result.user.getIdToken();
+
+        if (!accessToken) throw new Error('No access token');
+
+        // Fetch roles from our backend
+        const response = await fetch(`${apiBase}/v1/private/${encodeURIComponent(tenantSlug)}/me`, {
+          headers: { Authorization: `Bearer ${accessToken}` }
+        });
+        
+        const body = await response.json().catch(() => ({}));
+        
+        if (!response.ok) {
+           showAuthMessage('Login gagal.', body.error || 'Akun tidak dikenali.');
+           await auth.signOut();
+           isSigningIn = false;
+           return;
+        }
+
+        const userRoles = body.user?.roles || ['wali']; // fallback default
+        const requestedRole = roleInput.value;
+        
+        if (!userRoles.includes(requestedRole)) {
+           showAuthMessage('Akses Ditolak', `Akun Anda tidak memiliki peran ${requestedRole}.`);
+           await auth.signOut();
+           isSigningIn = false;
+           return;
+        }
+
+        safeStorage('sessionStorage')?.setItem('dwj-ui-role', requestedRole);
+        safeStorage('localStorage')?.setItem('dwj-ui-role', requestedRole);
+        // Persist token for the frontend app
+        safeStorage('localStorage')?.setItem('dwj-access-token', accessToken);
+
+        const destination = redirectTarget || roleDestinations[requestedRole];
+        showAuthMessage('Login berhasil.', 'Mengarahkan...', `<a class="portal-link" href="${destination}">Buka portal &rarr;</a>`);
+        window.location.href = destination;
+
+      } catch (err) {
+        console.error(err);
+        showAuthMessage('Gagal masuk.', err.message);
+      }
+    });
+  </script>

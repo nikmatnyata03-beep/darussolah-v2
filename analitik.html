@@ -208,14 +208,47 @@
   <div class="modal" id="emisModal" hidden aria-hidden="true"><div class="modal-backdrop" data-close-modal></div><div class="dialog" role="dialog" aria-modal="true" aria-labelledby="emisModalTitle"><button class="dialog-close" type="button" data-close-modal aria-label="Tutup">×</button><span class="eyebrow">Kesiapan EMIS</span><h2 class="serif" id="emisModalTitle">Validasi data</h2><p>Lengkapi data yang masih kurang sebelum file siap diunduh.</p><div class="emis-list" style="margin-top:0;border-top:1px solid var(--line)"><div class="emis-row" style="border-color:var(--line)"><span>Data santri &amp; identitas</span><strong class="ready">Lengkap</strong></div><div class="emis-row" style="border-color:var(--line)"><span>Data guru &amp; kualifikasi</span><strong class="ready">Lengkap</strong></div><div class="emis-row" style="border-color:var(--line)"><span>Rombel &amp; jadwal mengajar</span><strong style="color:var(--red)">4 belum lengkap</strong></div></div><div class="dialog-actions"><button class="btn btn-ghost" type="button" data-close-modal>Periksa nanti</button><button class="btn btn-primary" type="button" id="confirmEmis">Ekspor file</button></div></div></div>
   <div class="toast" id="toast" role="status"><span>✓</span><div><strong id="toastTitle">Perubahan tersimpan</strong><small id="toastText">Laporan berhasil disiapkan.</small></div></div>
   <script>
+    window.addEventListener('darussolah:ready', async () => {
+    try {
+        const portal = window.DarussolahPortal;
+        if (!portal || !portal.session) return;
+        
+        const res = await portal.fetchPrivate(null, 'admin/statistics', portal.session);
+        if (res && res.items) {
+            // Update total active students
+            let totalStudents = 0;
+            res.items.forEach(inst => totalStudents += inst.count);
+            const totalEl = document.querySelector('#kpi-active');
+            if (totalEl) totalEl.textContent = totalStudents;
+            
+            // Update institution list
+            const instList = document.querySelector('.institution-list');
+            if (instList) {
+                instList.innerHTML = res.items.map(inst => {
+                    const pct = totalStudents > 0 ? (inst.count / totalStudents * 100).toFixed(0) : 0;
+                    return \`<div class="institution-row">
+                        <div class="institution-copy">
+                            <span class="institution-mark">${inst.slug.substring(0,2).toUpperCase()}</span>
+                            <span><strong>${inst.name}</strong><span>Unit ${inst.slug.toUpperCase()}</span></span>
+                        </div>
+                        <b class="institution-total">${inst.count}</b>
+                        <div class="bar-line"><i style="width:${pct}%"></i></div>
+                    </div>\`;
+                }).join('');
+            }
+        }
+    } catch(e) {
+        console.error('Failed to load statistics', e);
+    }
+});
     let toastTimer;
      const toast=document.getElementById('toast');
      document.querySelectorAll('.help-link[href="#bantuan"]').forEach(link=>link.href='index.html#faq');
     function showToast(title,text){document.getElementById('toastTitle').textContent=title;document.getElementById('toastText').textContent=text;toast.classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>toast.classList.remove('show'),3200);}
     function setModal(id,open){const modal=document.getElementById(id);modal.hidden=!open;modal.setAttribute('aria-hidden',String(!open));}
-     const scopes={all:{students:'440',attendance:'93,8%',admissions:'86',income:'Rp 31,6 jt'},ra:{students:'86',attendance:'95,1%',admissions:'21',income:'Rp 7,2 jt'},tpq:{students:'126',attendance:'93,4%',admissions:'32',income:'Rp 9,8 jt'},mdt:{students:'174',attendance:'92,9%',admissions:'24',income:'Rp 11,7 jt'},rtq:{students:'54',attendance:'94,2%',admissions:'09',income:'Rp 2,9 jt'}};
-     const institutionScope=document.querySelector('#scopeSelect option[value="smp"]');if(institutionScope){institutionScope.value='rtq';institutionScope.textContent='RTQ Darussolah';}document.querySelectorAll('.institution-copy strong').forEach(item=>{if(item.textContent.includes('SMP'))item.textContent='RTQ Darussolah';});
-    document.getElementById('scopeSelect').addEventListener('change',(event)=>{const data=scopes[event.target.value];document.getElementById('studentTotal').textContent=data.students;document.getElementById('attendanceTotal').textContent=data.attendance;document.getElementById('attendanceChartValue').textContent=data.attendance;document.getElementById('admissionTotal').textContent=data.admissions;document.getElementById('incomeTotal').textContent=data.income;showToast('Lingkup diperbarui',`Analitik ${event.target.selectedOptions[0].text} sedang ditampilkan.`);});
+     
+     const institutionScope=document.querySelector('#scopeSelect option[value="smp"]');if(institutionScope){institutionScope.value='rtq';institutionScope.textContent='RTQ Darussolah';}
+    
     document.querySelectorAll('[data-period]').forEach((button)=>button.addEventListener('click',()=>{document.querySelectorAll('[data-period]').forEach((item)=>item.classList.toggle('active',item===button));document.getElementById('admissionPeriod').textContent=button.dataset.period==='month'?'Agustus 2026':button.dataset.period==='term'?'Semester 1':'2026 / 2027';showToast('Periode diperbarui',`Grafik kini menampilkan ${button.textContent.toLowerCase()}.`);}));
     document.getElementById('emisButton').addEventListener('click',()=>setModal('emisModal',true));
      document.getElementById('confirmEmis').addEventListener('click',()=>{setModal('emisModal',false);showToast('Ekspor EMIS belum tersedia','Lengkapi 4 data rombel dan hubungkan endpoint ekspor terlebih dahulu. Tidak ada file yang dibuat.');});

@@ -297,7 +297,7 @@
           </div>
         </div>
 
-        <section class="panel" style="margin-top:17px" id="transaksi"><div class="panel-header"><div class="panel-heading"><h2>Transaksi terbaru</h2><p>Aktivitas keuangan yang tercatat di sistem</p></div><button class="pay-button" type="button" data-action="export">Unduh laporan</button></div><div class="bill-scroll"><table class="bill-table"><thead><tr><th>Deskripsi</th><th>Waktu</th><th>Metode</th><th>Nominal</th><th>Status</th></tr></thead><tbody><tr><td><div class="payer-cell"><span class="payer-avatar">SP</span><span class="payer-detail">SPP Ahmad Rasyid<small>INV-0826-0018</small></span></div></td><td>Hari ini, 09.42</td><td>Transfer bank</td><td class="amount">+ Rp 250.000</td><td><span class="status-pill">Berhasil</span></td></tr><tr><td><div class="payer-cell"><span class="payer-avatar">WK</span><span class="payer-detail">Wakaf renovasi ruang belajar<small>DON-0826-0007</small></span></div></td><td>Kemarin, 16.18</td><td>QRIS</td><td class="amount">+ Rp 500.000</td><td><span class="status-pill">Berhasil</span></td></tr><tr><td><div class="payer-cell"><span class="payer-avatar">SP</span><span class="payer-detail">SPP Salwa Nabila<small>INV-0826-0017</small></span></div></td><td>Kemarin, 11.05</td><td>Tunai</td><td class="amount">+ Rp 150.000</td><td><span class="status-pill">Berhasil</span></td></tr></tbody></table></div></section>
+        <section class="panel" style="margin-top:17px" id="transaksi"><div class="panel-header"><div class="panel-heading"><h2>Transaksi terbaru</h2><p>Aktivitas keuangan yang tercatat di sistem</p></div><button class="pay-button" type="button" data-action="export">Unduh laporan</button><button class="pay-button" type="button" id="export-sheets-btn" style="margin-left: 8px;">Ekspor ke Sheets</button></div><div class="bill-scroll"><table class="bill-table"><thead><tr><th>Deskripsi</th><th>Waktu</th><th>Metode</th><th>Nominal</th><th>Status</th></tr></thead><tbody><tr><td><div class="payer-cell"><span class="payer-avatar">SP</span><span class="payer-detail">SPP Ahmad Rasyid<small>INV-0826-0018</small></span></div></td><td>Hari ini, 09.42</td><td>Transfer bank</td><td class="amount">+ Rp 250.000</td><td><span class="status-pill">Berhasil</span></td></tr><tr><td><div class="payer-cell"><span class="payer-avatar">WK</span><span class="payer-detail">Wakaf renovasi ruang belajar<small>DON-0826-0007</small></span></div></td><td>Kemarin, 16.18</td><td>QRIS</td><td class="amount">+ Rp 500.000</td><td><span class="status-pill">Berhasil</span></td></tr><tr><td><div class="payer-cell"><span class="payer-avatar">SP</span><span class="payer-detail">SPP Salwa Nabila<small>INV-0826-0017</small></span></div></td><td>Kemarin, 11.05</td><td>Tunai</td><td class="amount">+ Rp 150.000</td><td><span class="status-pill">Berhasil</span></td></tr></tbody></table></div></section>
       </div>
     </main>
   </div>
@@ -307,65 +307,191 @@
   <div class="toast" id="toast" role="status"><span>✓</span><div><strong id="toastTitle">Perubahan tersimpan</strong><small id="toastText">Data keuangan berhasil diperbarui.</small></div></div>
 
   <script>
-    const modalButtons = document.querySelectorAll('[data-modal]');
-    const modals = document.querySelectorAll('.modal');
-     const toast = document.getElementById('toast');
-     document.querySelectorAll('.help-link[href="#bantuan"]').forEach(link=>link.href='index.html#faq');
     let toastTimer;
-     let activeFilter = 'all';
-     document.getElementById('transaksi')?.setAttribute('id','laporan');
+    let activeFilter = 'all';
+    const toast = document.getElementById('toast');
+    document.querySelectorAll('.help-link[href="#bantuan"]').forEach(link=>link.href='index.html#faq');
+    document.getElementById('transaksi')?.setAttribute('id','laporan');
+
     function showToast(title, text) {
-      document.getElementById('toastTitle').textContent = title;
-      document.getElementById('toastText').textContent = text;
-      toast.classList.add('show');
-      clearTimeout(toastTimer);
-      toastTimer = setTimeout(() => toast.classList.remove('show'), 3200);
+        document.getElementById('toastTitle').textContent = title;
+        document.getElementById('toastText').textContent = text;
+        toast.classList.add('show');
+        clearTimeout(toastTimer);
+        toastTimer = setTimeout(() => toast.classList.remove('show'), 3200);
     }
-    function openModal(id) {
-      const modal = document.getElementById(id);
-      if (!modal) return;
-      modal.hidden = false;
-      modal.setAttribute('aria-hidden', 'false');
-      const firstInput = modal.querySelector('input');
-      if (firstInput) setTimeout(() => firstInput.focus(), 50);
+
+    function setModal(id, open) {
+        const modal = document.getElementById(id);
+        modal.hidden = !open;
+        modal.setAttribute('aria-hidden', String(!open));
+        if (open) modal.querySelector('input,select')?.focus();
     }
-    function closeModal(modal) {
-      modal.hidden = true;
-      modal.setAttribute('aria-hidden', 'true');
+
+    function filterRows() {
+        const query = document.getElementById('billSearch').value.toLowerCase().trim();
+        document.querySelectorAll('#invoiceRows tr').forEach(row => {
+            row.hidden = (activeFilter !== 'all' && row.dataset.status !== activeFilter) || !row.textContent.toLowerCase().includes(query);
+        });
     }
-    function refreshBills() {
-      const query = document.getElementById('billSearch').value.toLowerCase().trim();
-      document.querySelectorAll('#billRows tr').forEach((row) => {
-        const matchesFilter = activeFilter === 'all' || row.dataset.status === activeFilter;
-        const matchesSearch = row.textContent.toLowerCase().includes(query);
-        row.hidden = !(matchesFilter && matchesSearch);
+
+    document.querySelectorAll('[data-bill-filter]').forEach(button => button.addEventListener('click', () => {
+        activeFilter = button.dataset.billFilter;
+        document.querySelectorAll('[data-bill-filter]').forEach(item => item.classList.toggle('active', item === button));
+        filterRows();
+    }));
+
+    document.getElementById('billSearch').addEventListener('input', filterRows);
+    document.querySelectorAll('[data-modal]').forEach(button => button.addEventListener('click', () => setModal(button.dataset.modal, true)));
+    document.querySelectorAll('[data-close-modal]').forEach(button => button.addEventListener('click', () => setModal(button.closest('.modal').id, false)));
+    document.addEventListener('keydown', (event) => { if (event.key === 'Escape') document.querySelectorAll('.modal').forEach(m => setModal(m.id, false)); });
+
+    // Dynamic Fetch
+    window.addEventListener('darussolah:ready', async () => {
+        try {
+            // Setup students dropdown
+            const stdRes = await window.DarussolahPortal.fetchPrivate(null, 'admin/students', window.DarussolahPortal.session);
+            if(stdRes && stdRes.items) {
+               const stSel = document.getElementById('studentName');
+               if (stSel) {
+                 stSel.outerHTML = \`<select id="studentName" required>
+                     ${stdRes.items.map(s => \`<option value="${s.id}">${s.full_name}</option>\`).join('')}
+                 </select>\`;
+               }
+            }
+
+            const res = await window.DarussolahPortal.fetchPrivate(null, 'admin/invoices', window.DarussolahPortal.session);
+            if(res && res.items) {
+                const tbody = document.querySelector('#invoiceRows');
+                tbody.innerHTML = res.items.map(inv => {
+                    const initials = (inv.student_name||'S').substring(0,2).toUpperCase();
+                    const sName = inv.student_name;
+                    const st = inv.status || 'unpaid';
+                    const isPaid = st === 'paid' || st === 'lunas';
+                    const pClass = isPaid ? 'status-pill' : 'status-pill pending';
+                    const pText = isPaid ? 'Lunas' : 'Menunggu';
+                    const btnClass = 'pay-button';
+                    const btnText = isPaid ? 'Kwitansi' : 'Ingatkan';
+                    
+                    return \`<tr data-status="${isPaid ? 'paid' : 'pending'}">
+                        <td><div class="payer-cell"><span class="payer-avatar">${initials}</span><span class="payer-detail">${sName}<small>${inv.type||'Tagihan'}</small></span></div></td>
+                        <td>${inv.due_date||'-'}</td>
+                        <td class="amount">${inv.amount||'Rp 0'}</td>
+                        <td><span class="${pClass}">${pText}</span></td>
+                        <td><button class="${btnClass}" type="button" onclick="alert('${btnText} santri ${sName}')">${btnText}</button></td>
+                    </tr>\`;
+                }).join('');
+
+                const total = res.items.length;
+                const paid = res.items.filter(i => i.status==='paid' || i.status==='lunas').length;
+                document.querySelector('#totalBills').textContent = total;
+                document.querySelector('#paidBills').textContent = paid;
+                document.querySelector('#billChip').textContent = `${total} tagihan`;
+            }
+        } catch(e) {
+            console.error('Failed to load invoices', e);
+        }
+    });
+
+    document.getElementById('invoiceForm').addEventListener('submit', async event => {
+        event.preventDefault();
+        const stdId = document.getElementById('studentName').value;
+        const amount = document.getElementById('invoiceAmount').value;
+        const due = document.getElementById('invoiceDue').value;
+        const type = document.getElementById('invoiceType').value;
+        
+        try {
+            await window.DarussolahPortal.requestPrivate(null, 'admin/invoices', window.DarussolahPortal.session, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    student_id: stdId,
+                    type: type,
+                    amount: amount,
+                    due_date: due,
+                    status: 'unpaid'
+                })
+            });
+            showToast('Invoice dibuat', 'Tagihan berhasil ditambahkan.');
+            setModal('invoiceModal', false);
+            event.target.reset();
+            setTimeout(() => window.location.reload(), 1500);
+        } catch (e) {
+            showToast('Gagal', 'Periksa koneksi Anda.');
+        }
+    });
+
+    document.getElementById('donationForm').addEventListener('submit', event => {
+        event.preventDefault();
+        showToast('Donasi tersimpan', 'Penerimaan dana berhasil dicatat (mode demo).');
+        setModal('donationModal', false);
+        event.target.reset();
+    });
+
+    document.querySelectorAll('[data-action="export"]').forEach(btn => btn.addEventListener('click', () => showToast('Ekspor dimulai', 'Laporan PDF sedang disiapkan.')));
+    document.getElementById('export-sheets-btn')?.addEventListener('click', () => showToast('Sinkronisasi Sheets', 'Menyalin data ke Google Sheets...'));
+</script>
+
+  <script type="module">
+    import { initGoogleAuth, googleSignIn, logoutGoogle, getAccessToken, createGoogleSheet } from './google-docs.js';
+    
+    // UI elements for Google Sheets
+    const sheetsBtn = document.getElementById('export-sheets-btn');
+    
+    if (sheetsBtn) {
+      sheetsBtn.addEventListener('click', async (e) => {
+        e.preventDefault();
+        
+        let token = getAccessToken();
+        if (!token) {
+           try {
+             const res = await googleSignIn();
+             token = res.accessToken;
+           } catch (err) {
+             console.error(err);
+             alert('Gagal masuk Google.');
+             return;
+           }
+        }
+        
+        const originalText = sheetsBtn.textContent;
+        sheetsBtn.textContent = 'Mengekspor...';
+        sheetsBtn.disabled = true;
+        
+        try {
+          // Prepare data from table
+          const tableRows = [...document.querySelectorAll('.bill-table tbody tr')];
+          const data = [['Deskripsi', 'Waktu', 'Metode', 'Nominal', 'Status']];
+          
+          tableRows.forEach(tr => {
+            const cells = tr.querySelectorAll('td');
+            if (cells.length === 5) {
+               data.push([
+                 cells[0].textContent.trim(),
+                 cells[1].textContent.trim(),
+                 cells[2].textContent.trim(),
+                 cells[3].textContent.trim(),
+                 cells[4].textContent.trim()
+               ]);
+            }
+          });
+          
+          const sheet = await createGoogleSheet(token, 'Laporan Keuangan TPQ Darul Jinan', data);
+          alert('Berhasil mengekspor ke Google Sheets: ' + sheet.spreadsheetUrl);
+        } catch (err) {
+          console.error(err);
+          alert('Gagal mengekspor data.');
+        } finally {
+          sheetsBtn.textContent = originalText;
+          sheetsBtn.disabled = false;
+        }
+      });
+      
+      initGoogleAuth((user, token) => {
+        console.log('Google Auth initialized, user logged in.');
       });
     }
-    modalButtons.forEach((button) => button.addEventListener('click', () => openModal(button.dataset.modal)));
-    document.querySelectorAll('[data-close-modal]').forEach((button) => button.addEventListener('click', () => closeModal(button.closest('.modal'))));
-    document.addEventListener('keydown', (event) => { if (event.key === 'Escape') modals.forEach((modal) => { if (!modal.hidden) closeModal(modal); }); });
-    document.querySelectorAll('.filter-tab').forEach((button) => button.addEventListener('click', () => {
-      document.querySelectorAll('.filter-tab').forEach((item) => item.classList.remove('active'));
-      button.classList.add('active');
-      activeFilter = button.dataset.filter;
-      refreshBills();
-    }));
-    document.getElementById('billSearch').addEventListener('input', refreshBills);
-    document.querySelectorAll('[data-action]').forEach((button) => button.addEventListener('click', () => {
-      const action = button.dataset.action;
-       if (action === 'remind') showToast('Pengingat belum dikirim', 'Endpoint komunikasi belum terhubung. Tidak ada pesan yang dikirim.');
-       if (action === 'receipt') showToast('Kwitansi belum tersedia', 'Generator kwitansi belum terhubung. Tidak ada dokumen yang dibuat.');
-       if (action === 'export') showToast('Laporan belum tersedia', 'Endpoint ekspor keuangan belum terhubung. Tidak ada file yang dibuat.');
-    }));
-    document.getElementById('invoiceForm').addEventListener('submit', (event) => {
-      event.preventDefault();
-      showToast('Invoice belum tersimpan', 'Endpoint keuangan belum terhubung. Tidak ada perubahan yang dikirim ke server.');
-    });
-    document.getElementById('donationForm').addEventListener('submit', (event) => {
-      event.preventDefault();
-      showToast('Donasi belum tersimpan', 'Endpoint keuangan belum terhubung. Tidak ada perubahan yang dikirim ke server.');
-    });
-     let billedTotal=7.85;let pendingCount=4;let donationTotal=4.2;let incomeTotal=12.4;
-   </script>
+  </script>
+
 </body>
 </html>

@@ -10,8 +10,8 @@
     tenantSlug: String(source.tenantSlug || 'yayasan-darussolah-wal-jinan')
   });
   const role = document.body?.dataset.portalRole || '';
-  const allConfigured = Boolean(config.apiBase && config.supabaseUrl && config.supabaseAnonKey);
-  const partiallyConfigured = Boolean(config.apiBase || config.supabaseUrl || config.supabaseAnonKey);
+  const allConfigured = Boolean(config.apiBase);
+  const partiallyConfigured = Boolean(config.apiBase);
   const roleLabels = {
     wali: 'Wali santri',
     guru: 'Guru / ustadz',
@@ -111,7 +111,7 @@
     button.className = 'portal-runtime-signout';
     button.addEventListener('click', async () => {
       button.disabled = true;
-      await client.auth.signOut();
+      if (window.__firebaseAuth && window.__firebaseSignOut) { await window.__firebaseSignOut(window.__firebaseAuth); } window.location.href="login.html";
       try {
         localStorage.removeItem(sessionModeKey);
         sessionStorage.removeItem(sessionModeKey);
@@ -162,12 +162,16 @@
     let lastError = null;
     for (let attempt = 0; attempt < 3; attempt += 1) {
       try {
-        const current = await client?.auth?.getSession?.();
+        const current = await null?.auth?.getSession?.();
         activeSession = current?.data?.session || activeSession;
       } catch (error) {
         // The request below can still use the session captured during bootstrap.
       }
-      if (!activeSession?.access_token) throw new Error('sesi tidak tersedia');
+      
+      const firebaseToken = localStorage.getItem('dwj-access-token');
+      if (!firebaseToken) throw new Error('sesi tidak tersedia');
+      activeSession = { access_token: firebaseToken };
+
       try {
         const response = await fetch(privatePath(suffix), {
           ...options,
@@ -178,7 +182,7 @@
           }
         });
         if (response.status === 401 && !refreshed) {
-          const refreshedSession = await client.auth.refreshSession();
+          const refreshedSession = { data: { session: null } };
           activeSession = refreshedSession.data?.session || null;
           refreshed = true;
           if (activeSession?.access_token) continue;
@@ -206,40 +210,41 @@
       setStatus('Mode demo');
       return;
     }
-    if (!allConfigured || !window.supabase?.createClient) {
+    if (!allConfigured) {
       setStatus('Konfigurasi belum lengkap', 'error');
-      showBlocked('Portal belum siap', 'Isi API URL, Supabase URL, dan anon key pada darussolah-config.js.');
+      showBlocked('Portal belum siap', 'Isi API URL pada darussolah-config.js.');
       return;
     }
     document.documentElement.dataset.dwjPortalState = 'checking';
-     const client = window.supabase.createClient(config.supabaseUrl, config.supabaseAnonKey, {
-       auth: { persistSession: true, storage: sessionStorageForAuth() }
-     });
-    let sessionData;
-    let sessionError;
+    
     try {
-      ({ data: sessionData, error: sessionError } = await client.auth.getSession());
-    } catch (error) {
-      setStatus('Sesi belum siap', 'error');
-      showBlocked('Sesi belum siap', 'Koneksi sesi belum siap. Coba lagi tanpa keluar dari akun.');
-      return;
-    }
-    if (sessionError) {
-      setStatus('Sesi belum siap', 'error');
-      showBlocked('Sesi belum siap', 'Koneksi sesi belum siap. Coba lagi tanpa keluar dari akun.');
-      return;
-    }
-    if (!sessionData.session) {
-      const redirect = `${window.location.pathname.split('/').pop() || 'index.html'}${window.location.search}`;
-      window.location.replace(`login.html?redirect=${encodeURIComponent(redirect)}`);
-      return;
-    }
-    try {
-      const session = sessionData.session;
+      const { initializeApp, getApps, getApp } = await import('https://www.gstatic.com/firebasejs/11.0.1/firebase-app.js');
+      const { getAuth, onAuthStateChanged, getIdToken, signOut } = await import('https://www.gstatic.com/firebasejs/11.0.1/firebase-auth.js');
+      
+      const resConfig = await fetch('/firebase-applet-config.json');
+      const firebaseConfig = await resConfig.json();
+      const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
+      const auth = getAuth(app);
+      
+      window.__firebaseAuth = auth;
+      window.__firebaseSignOut = signOut;
+
+      onAuthStateChanged(auth, async (user) => {
+        if (!user) {
+          const redirect = `${window.location.pathname.split('/').pop() || 'index.html'}${window.location.search}`;
+          if (!window.location.pathname.includes('login.html')) {
+            window.location.replace(`login.html?redirect=${encodeURIComponent(redirect)}`);
+          }
+          return;
+        }
+        
+        try {
+          const firebaseToken = await getIdToken(user);
+          const session = { access_token: firebaseToken };
       const [meResponse, studentsResponse, classesResponse] = await Promise.all([
-        fetchPrivate(client, 'me', session),
-        fetchPrivate(client, 'students', session),
-        fetchPrivate(client, 'classes', session)
+        fetchPrivate(null, 'me', session),
+        fetchPrivate(null, 'students', session),
+        fetchPrivate(null, 'classes', session)
       ]);
       let attendanceResponse = null;
       let learningResponse = null;
@@ -253,10 +258,10 @@
          || classes.find(item => item.institution_code === 'TPQ')
          || classes[0];
        if (primaryClass && supportsClassSelection) rememberActiveClassId(session, primaryClass.id);
-      if (document.body.dataset.portalPage === 'attendance' && primaryClass) {
+      if ((document.body.dataset.portalPage === 'attendance' || role === 'wali') && primaryClass) {
         try {
           attendanceResponse = await fetchPrivate(
-            client,
+            null,
             `attendance?class_id=${encodeURIComponent(primaryClass.id)}&attendance_date=${new Date().toISOString().slice(0, 10)}`,
             session
           );
@@ -268,13 +273,13 @@
         const suffix = role === 'wali'
           ? 'learning'
           : primaryClass ? `learning?class_id=${encodeURIComponent(primaryClass.id)}` : 'learning';
-        learningResponse = await fetchPrivate(client, suffix, session);
+        learningResponse = await fetchPrivate(null, suffix, session);
         const submissionsSuffix = role === 'wali'
           ? 'learning/submissions'
           : primaryClass
           ? `learning/submissions?class_id=${encodeURIComponent(primaryClass.id)}`
           : 'learning/submissions';
-        learningSubmissionsResponse = await fetchPrivate(client, submissionsSuffix, session);
+        learningSubmissionsResponse = await fetchPrivate(null, submissionsSuffix, session);
       }
       const context = {
         ...(meResponse.user || {}),
@@ -287,13 +292,13 @@
       }
        setIdentity(context, session, primaryClass);
        setStatus('Akun terhubung', 'live');
-        addSignOut(client);
+        addSignOut(null);
         addClassPicker(classes, primaryClass, session);
         document.querySelector('.side-link.active, [aria-current="page"]')?.scrollIntoView({ block: 'nearest', inline: 'center' });
        document.documentElement.dataset.dwjPortalState = 'live';
        const students = studentsResponse.items || [];
        window.DarussolahPortal = Object.freeze({
-         client, config, session, context, students, classes, primaryClass, requestPrivate,
+         client: null, config, session, context, students, classes, primaryClass, requestPrivate,
         attendance: attendanceResponse,
         learning: learningResponse?.items || [],
         learningSubmissions: learningSubmissionsResponse?.items || [],
@@ -312,7 +317,13 @@
       setStatus('Gagal memuat akun', 'error');
        showBlocked('Data belum dapat dimuat', error.message || 'Periksa koneksi dan konfigurasi API.', { showLogin: Boolean(error.authRequired) });
     }
-  };
+  }); // end onAuthStateChanged
+  } catch (initErr) {
+      document.documentElement.dataset.dwjPortalState = 'blocked';
+      setStatus('Gagal memuat akun', 'error');
+      showBlocked('Firebase gagal dimuat', initErr.message);
+  }
+};
 
   window.DarussolahPortal = Object.freeze({ config, start, fetchPrivate, requestPrivate });
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start, { once: true });

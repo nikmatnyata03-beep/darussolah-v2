@@ -460,28 +460,26 @@
            showToast('Data santri belum siap.', 'Pastikan data siswa dari API sudah termuat sebelum menyimpan.');
            return;
          }
+         
          try {
-           const {data: sessionData} = await portal.client.auth.getSession();
-           const token = sessionData.session?.access_token;
-           if (!token) {
-             showToast('Sesi berakhir.', 'Silakan masuk kembali sebelum menyimpan absensi.');
-             return;
-           }
-           const response = await fetch(`${portal.config.apiBase}/v1/private/${encodeURIComponent(portal.config.tenantSlug)}/attendance`, {
+           await window.DarussolahPortal.requestPrivate(null, 'attendance', window.DarussolahPortal.session, {
              method: 'PUT',
-             headers: {'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json'},
-              body: JSON.stringify({class_id: portal.primaryClass?.id || portal.classes[0].id, attendance_date: new Date().toISOString().slice(0, 10), records})
+             headers: { 'Content-Type': 'application/json' },
+             body: JSON.stringify({
+               class_id: portal.primaryClass?.id,
+               attendance_date: new Date().toISOString().slice(0, 10),
+               records
+             })
            });
-           if (!response.ok) {
-             showToast('Absensi belum tersimpan.', `Server mengembalikan status ${response.status}.`);
-             return;
-           }
-           showToast('Absensi tersimpan.', `${records.length} data berhasil dikirim ke server.`);
-           document.querySelector('#sync-title').textContent = 'Tersimpan ke server';
-           document.querySelector('#sync-detail').textContent = 'Perubahan terakhir sudah diterima API.';
+
+           showToast('Absensi tersimpan.', `${total} perubahan telah disinkronkan ke server.`);
+           document.querySelector('#sync-title').textContent = 'Sinkronisasi berhasil';
+           document.querySelector('#sync-detail').textContent = 'Semua perubahan telah tersimpan aman.';
          } catch (error) {
-           showToast('Koneksi belum tersedia.', 'Perubahan tetap ada di layar dan dapat dicoba lagi.');
+           console.error('Save failed:', error);
+           showToast('Gagal.', 'Perubahan gagal disimpan. Silakan coba lagi.');
          }
+
        });
 
       document.querySelector('#close-session').addEventListener('click', (event) => {

@@ -272,32 +272,16 @@
   <div class="toast" id="toast" role="status" aria-live="polite"><span>&#10003;</span><div><strong id="toast-title">Nilai tersimpan.</strong><small id="toast-detail">Rapor siap diperbarui.</small></div></div>
   <script>
     (() => {
-       const rows = [...document.querySelectorAll('#grade-rows tr')];
-       const modal = document.querySelector('#report-modal');
-       const toast = document.querySelector('#toast');
-       document.querySelector('.approval-panel')?.setAttribute('id', 'approval');
-       const previewStudent = rows[0]?.querySelector('.student-detail')?.childNodes[0]?.textContent.trim();
-       if (previewStudent) { document.querySelector('.report-preview h3').textContent = previewStudent; document.querySelector('.sheet-head strong').textContent = previewStudent; }
-       let toastTimer;
-      const showToast = (title, detail) => {
-        document.querySelector('#toast-title').textContent = title;
-        document.querySelector('#toast-detail').textContent = detail;
-        toast.classList.add('show');
-        window.clearTimeout(toastTimer);
-        toastTimer = window.setTimeout(() => toast.classList.remove('show'), 3600);
-      };
-      const updateClassSummary = () => {
-        const inputs = [...document.querySelectorAll('.score-input')];
-        const passed = inputs.filter((input) => Number(input.value) >= 75).length;
-        const rate = inputs.length ? Math.round((passed / inputs.length) * 100) : 0;
-        document.querySelector('#saved-count').textContent = inputs.filter((input) => input.value !== '').length;
-        document.querySelector('#kkm-rate').textContent = `${rate}%`;
-        document.querySelector('#ready-count').textContent = String(rows.filter((row) => row.dataset.needs === 'false').length).padStart(2, '0');
-      };
-      const updateRow = (input) => {
+       const gradeRows = document.querySelector('#grade-rows');
+      let studentsList = [];
+      const modal = document.querySelector('#report-modal');
+      const toast = document.querySelector('#toast');
+      document.querySelector('.approval-panel')?.setAttribute('id', 'approval');
+
+      const updateRow = async (input, studentId) => {
         let score = Number(input.value);
-        if (Number.isNaN(score)) score = 0;
-        score = Math.max(0, Math.min(100, score));
+        if (score > 100) score = 100;
+        if (score < 0) score = 0;
         input.value = score;
         input.classList.toggle('low', score < 75);
         const row = input.closest('tr');
@@ -306,20 +290,80 @@
         const status = row.querySelector('.status-pill');
         status.textContent = needsReview ? 'Perlu perhatian' : 'Tuntas';
         status.classList.toggle('needs-review', needsReview);
-         updateClassSummary();
+        
+        // Find subject type from the table header index or data attribute
+        const subject = input.dataset.subject || 'Nilai';
+
+        try {
+           await window.DarussolahPortal.requestPrivate(null, 'admin/progress', window.DarussolahPortal.session, {
+             method: 'POST',
+             headers: { 'Content-Type': 'application/json' },
+             body: JSON.stringify({
+               student_id: studentId,
+               type: subject,
+               current_value: score.toString(),
+               target: 'Ujian Semester'
+             })
+           });
+           showToast('Nilai tersimpan.', 'Data rapor berhasil disinkronkan ke server.');
+        } catch(e) {
+           console.error(e);
+           showToast('Gagal menyimpan', 'Periksa koneksi Anda.');
+        }
       };
-      document.querySelectorAll('.score-input').forEach((input) => input.addEventListener('change', () => updateRow(input)));
+
+      window.addEventListener('darussolah:ready', async () => {
+         try {
+            const res = await window.DarussolahPortal.fetchPrivate(null, 'students', window.DarussolahPortal.session);
+            const progRes = await window.DarussolahPortal.fetchPrivate(null, 'admin/progress', window.DarussolahPortal.session);
+            
+            if (res && res.items && res.items.length) {
+               studentsList = res.items;
+               gradeRows.innerHTML = res.items.map(s => {
+                  const initial = s.full_name.substring(0, 2).toUpperCase();
+                  
+                  // Find grades for this student
+                  const pList = (progRes.items || []).filter(p => Number(p.student_id) === Number(s.id));
+                  const getScore = (type) => {
+                     const typed = pList.filter(p => p.current_value && p.target === 'Ujian Semester' && p.current_value.includes(type) || (p.type === type));
+                     return typed.length ? typed[typed.length - 1].current_value : '0';
+                  };
+                  
+                  const sTahsin = getScore('Tahsin');
+                  const sTahfidz = getScore('Tahfidz');
+                  const sAdab = getScore('Adab');
+                  
+                  const isLow = Number(sTahsin) < 75 || Number(sTahfidz) < 75 || Number(sAdab) < 75;
+                  const pillStatus = isLow ? 'Perlu perhatian' : (sTahsin=='0' && sTahfidz=='0' && sAdab=='0') ? 'Belum diisi' : 'Tuntas';
+                  const pillClass = isLow ? 'status-pill needs-review' : 'status-pill';
+                  
+                  return \`<tr data-name="${s.full_name}" data-needs="${isLow}">
+                     <td><div class="student-cell"><span class="student-avatar">${initial}</span><span class="student-detail">${s.full_name}<small>ID: ${s.nis || '-'}</small></span></div></td>
+                     <td><input class="score-input ${Number(sTahsin)<75?'low':''}" type="number" min="0" max="100" placeholder="0" value="${sTahsin}" data-subject="Tahsin" data-student-id="${s.id}" /></td>
+                     <td><input class="score-input ${Number(sTahfidz)<75?'low':''}" type="number" min="0" max="100" placeholder="0" value="${sTahfidz}" data-subject="Tahfidz" data-student-id="${s.id}" /></td>
+                     <td><input class="score-input ${Number(sAdab)<75?'low':''}" type="number" min="0" max="100" placeholder="0" value="${sAdab}" data-subject="Adab" data-student-id="${s.id}" /></td>
+                     <td>-</td>
+                     <td><span class="${pillClass}">${pillStatus}</span></td>
+                     <td><button class="note-button" type="button" aria-label="Catatan ${s.full_name}">&hellip;</button></td>
+                  </tr>\`;
+               }).join('');
+               
+               document.querySelectorAll('.score-input').forEach((input) => input.addEventListener('change', () => updateRow(input, input.dataset.studentId)));
+               document.querySelectorAll('.note-button').forEach((button) => button.addEventListener('click', () => showToast('Catatan santri.', 'Kolom catatan akhlak siap diisi pada detail rapor.')));
+            } else {
+               gradeRows.innerHTML = '<tr><td colspan="7" style="text-align:center; padding:2rem;">Belum ada santri terdaftar</td></tr>';
+            }
+         } catch(e) {
+            console.error('Error fetching students:', e);
+         }
+      });
+      
       document.querySelectorAll('select').forEach((select) => select.addEventListener('change', () => showToast('Tampilan diperbarui.', `${select.value} sedang ditampilkan.`)));
-      document.querySelectorAll('.note-button').forEach((button) => button.addEventListener('click', () => showToast('Catatan santri.', 'Kolom catatan akhlak siap diisi pada detail rapor.')));
       document.querySelector('#journal-button').addEventListener('click', () => showToast('Jurnal guru siap.', 'Tambahkan ringkasan materi dan catatan pertemuan hari ini.'));
       document.querySelector('#akhlak-button').addEventListener('click', () => showToast('Catatan akhlak siap.', 'Kolom penilaian non-akademik akan terbuka di detail rapor.'));
       document.querySelectorAll('[data-open-report]').forEach((button) => button.addEventListener('click', () => { modal.hidden = false; }));
       document.querySelectorAll('[data-close-report]').forEach((button) => button.addEventListener('click', () => { modal.hidden = true; }));
       document.addEventListener('keydown', (event) => { if (event.key === 'Escape') modal.hidden = true; });
-       document.querySelector('#approval-button').addEventListener('click', () => {
-         showToast('Rapor belum diajukan.', 'Endpoint persetujuan belum terhubung. Tidak ada perubahan yang dikirim ke server.');
-       });
-       document.querySelector('#download-report').addEventListener('click', () => { modal.hidden = true; showToast('PDF siap disiapkan.', 'Generator rapor akan membuat dokumen setelah backend aktif.'); });
        const noteModal=document.createElement('div');noteModal.className='modal';noteModal.hidden=true;noteModal.setAttribute('aria-hidden','true');noteModal.innerHTML='<div class="modal-backdrop"></div><div class="report-modal"><button class="modal-close" type="button" aria-label="Tutup catatan">&times;</button><span class="eyebrow">Catatan santri</span><h2 class="serif">Catatan perkembangan.</h2><p>Tambahkan konteks yang dapat membantu wali memahami capaian santri.</p><label class="form-field" for="student-note"><span>Catatan</span><textarea id="student-note" rows="5" placeholder="Tulis catatan guru..."></textarea></label><div class="modal-actions"><button class="btn btn-ghost" type="button" data-close-note>Batal</button><button class="btn btn-primary" type="button" id="save-student-note">Simpan catatan</button></div></div>';document.body.append(noteModal);let activeNoteRow=null;const closeNote=()=>{noteModal.hidden=true;noteModal.setAttribute('aria-hidden','true');};document.querySelectorAll('.note-button').forEach(button=>button.addEventListener('click',()=>{activeNoteRow=button.closest('tr');document.getElementById('student-note').value=activeNoteRow.dataset.note||'';noteModal.hidden=false;noteModal.setAttribute('aria-hidden','false');document.getElementById('student-note').focus();}));noteModal.querySelector('.modal-backdrop').addEventListener('click',closeNote);noteModal.querySelector('[data-close-note]').addEventListener('click',closeNote);noteModal.querySelector('#save-student-note').addEventListener('click',()=>{if(activeNoteRow){activeNoteRow.dataset.note=document.getElementById('student-note').value.trim();activeNoteRow.querySelector('.note-button').title=activeNoteRow.dataset.note?'Catatan tersimpan':'Tambah catatan';}closeNote();showToast('Catatan tersimpan','Catatan santri akan ikut dalam pratinjau rapor.');});document.addEventListener('keydown',event=>{if(event.key==='Escape'&&!noteModal.hidden)closeNote();});
          updateClassSummary();
       })();

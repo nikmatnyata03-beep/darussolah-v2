@@ -227,13 +227,46 @@
     document.querySelectorAll('[data-close-modal]').forEach((button)=>button.addEventListener('click',()=>setModal(button.closest('.modal').id,false)));
     document.addEventListener('keydown',(event)=>{if(event.key==='Escape')document.querySelectorAll('.modal').forEach((modal)=>{if(!modal.hidden)setModal(modal.id,false);});});
     document.getElementById('broadcastForm').addEventListener('submit',(event)=>{event.preventDefault();const target=document.getElementById('broadcastTarget').selectedOptions[0].text;const mode=document.getElementById('sendMode').selectedOptions[0].text;document.getElementById('previewChannel').textContent=`${channel==='whatsapp'?'WhatsApp':'Email'} · ${target.split('·')[1]?.trim()||'penerima'}`;document.getElementById('previewSubject').textContent=document.getElementById('broadcastTitle').value;document.getElementById('previewCopy').textContent=document.getElementById('broadcastMessage').value;document.getElementById('confirmBroadcast').textContent=mode==='Kirim sekarang'?'Kirim pesan':'Jadwalkan pesan';setModal('previewModal',true);});
-     document.getElementById('confirmBroadcast').addEventListener('click',()=>{setModal('previewModal',false);showToast('Broadcast belum dikirim','Endpoint komunikasi belum terhubung. Tidak ada pesan yang dikirim atau dijadwalkan.');});
+     
     document.querySelectorAll('[data-delivery-filter]').forEach((button)=>button.addEventListener('click',()=>{deliveryFilter=button.dataset.deliveryFilter;document.querySelectorAll('[data-delivery-filter]').forEach((item)=>item.classList.toggle('active',item===button));refreshDelivery();}));
      document.querySelectorAll('[data-rule]').forEach((button)=>button.addEventListener('click',()=>{button.classList.toggle('on');const active=document.querySelectorAll('.toggle.on').length;document.getElementById('ruleValue').textContent=String(active).padStart(2,'0');showToast(button.classList.contains('on')?'Aturan berubah di layar':'Aturan berubah di layar','Perubahan belum dikirim ke server.');}));
-     document.getElementById('exportButton').addEventListener('click',()=>showToast('Laporan belum tersedia','Endpoint ekspor notifikasi belum terhubung. Tidak ada file yang dibuat.'));
-      document.getElementById('calendarForm').addEventListener('submit',(event)=>{event.preventDefault();showToast('Acara belum tersimpan','Endpoint kalender belum terhubung. Tidak ada perubahan yang dikirim ke server.');});
+     
      document.querySelectorAll('[data-rule]').forEach(button=>{button.setAttribute('aria-pressed',String(button.classList.contains('on')));button.addEventListener('click',()=>setTimeout(()=>button.setAttribute('aria-pressed',String(button.classList.contains('on'))),0));});
      let sentCount=Number(document.getElementById('sentValue').textContent.replace(/[^0-9]/g,''))||0;
-   </script>
+ 
+    document.getElementById('confirmBroadcast').addEventListener('click', async () => {
+      const target = document.getElementById('broadcastTarget').value;
+      const mode = document.getElementById('sendMode').value;
+      const title = document.getElementById('broadcastTitle').value;
+      const message = document.getElementById('broadcastMessage').value;
+
+      try {
+        await window.DarussolahPortal.requestPrivate(null, 'admin/broadcasts', window.DarussolahPortal.session, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            target,
+            mode,
+            channel,
+            title,
+            message
+          })
+        });
+
+        const row = document.createElement('tr');
+        row.dataset.delivery = 'sent';
+        row.innerHTML = `<td><div class="message-cell"><span class="message-icon">${channel==='whatsapp'?'WA':'@'}</span><span class="message-detail">${title}<small>Broadcast manual</small></span></div></td><td>${target}</td><td>Baru saja</td><td class="rate">0%</td><td><span class="delivery-status">Terkirim</span></td>`;
+        document.querySelector('#deliveryRows').prepend(row);
+        
+        setModal('previewModal', false);
+        document.getElementById('broadcastForm').reset();
+        document.getElementById('charCount').textContent = '0';
+        showToast('Pesan terkirim', 'Pesan telah dikirim ke antrean pengiriman backend.');
+      } catch (err) {
+        showToast('Gagal', 'Terjadi kesalahan jaringan.');
+      }
+    });
+
+  </script>
 </body>
 </html>

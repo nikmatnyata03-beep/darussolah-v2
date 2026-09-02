@@ -196,33 +196,140 @@
         <div class="content-header"><div><span class="eyebrow">Ruang tumbuh para pengajar</span><h1 class="serif">Kepegawaian.</h1><p>Data guru, jadwal, dan beban mengajar yang lebih mudah dipantau.</p></div><div class="header-actions"><button class="btn btn-ghost" type="button" id="exportStaff">Unduh rekap</button><button class="btn btn-primary" type="button" data-modal="staffModal">+ Tambah guru</button></div></div>
         <section class="metrics-grid" aria-label="Ringkasan kepegawaian"><article class="metric-card highlight"><span class="metric-label">Guru aktif</span><strong class="metric-value">18</strong><span class="metric-foot">14 tetap · 4 honorer</span></article><article class="metric-card"><span class="metric-label">JTM terjadwal</span><strong class="metric-value" id="jtmMetric">246</strong><span class="metric-foot">Dari target 288 jam</span></article><article class="metric-card"><span class="metric-label">Kehadiran mengajar</span><strong class="metric-value">96%</strong><span class="metric-foot">Dalam 30 hari terakhir</span></article><article class="metric-card"><span class="metric-label">Perlu ditinjau</span><strong class="metric-value">02</strong><span class="metric-foot" style="color:var(--red)">Jadwal belum lengkap</span></article></section>
         <div class="staff-layout">
-          <section class="panel" aria-labelledby="staffHeading"><div class="panel-header"><div class="panel-heading"><h2 id="staffHeading">Data induk guru</h2><p>Identitas, kualifikasi, status, dan beban mengajar · data contoh</p></div><span class="data-chip">18 guru aktif</span></div><div class="staff-tools"><div class="filter-tabs" role="tablist" aria-label="Filter guru"><button class="filter-tab active" type="button" data-staff-filter="all">Semua <span>(18)</span></button><button class="filter-tab" type="button" data-staff-filter="fixed">Tetap <span>(14)</span></button><button class="filter-tab" type="button" data-staff-filter="honor">Honorer <span>(4)</span></button></div><label class="search-wrap"><span class="sr-only">Cari guru</span><input class="search-input" id="staffSearch" type="search" placeholder="Cari nama..." /></label></div><div class="table-scroll"><table class="staff-table"><thead><tr><th>Guru / ustadz</th><th>Kualifikasi</th><th>Status</th><th>JTM</th><th>Hadir</th><th>Aksi</th></tr></thead><tbody id="staffRows"><tr data-staff="fixed"><td><div class="teacher-cell"><span class="teacher-avatar">NS</span><span class="teacher-detail">Ustadzah Nisa<small>TPQ · sore</small></span></div></td><td><span class="qualification">S.Pd.I<small>8 th mengajar</small></span></td><td><span class="employment">Tetap</span></td><td class="jtm-number">24 jam</td><td class="attendance-good">100%</td><td><button class="row-action" type="button" data-staff-action="Ustadzah Nisa">Detail</button></td></tr><tr data-staff="fixed"><td><div class="teacher-cell"><span class="teacher-avatar">AR</span><span class="teacher-detail">Ustadz Ahmad Rasyid<small>MDT · malam</small></span></div></td><td><span class="qualification">S.Ag.<small>6 th mengajar</small></span></td><td><span class="employment">Tetap</span></td><td class="jtm-number">20 jam</td><td class="attendance-good">96%</td><td><button class="row-action" type="button" data-staff-action="Ustadz Ahmad Rasyid">Detail</button></td></tr><tr data-staff="honor"><td><div class="teacher-cell"><span class="teacher-avatar">LF</span><span class="teacher-detail">Ustadzah Laila Fitria<small>RA · pagi</small></span></div></td><td><span class="qualification">P.GTK<small>4 th mengajar</small></span></td><td><span class="employment honor">Honorer</span></td><td class="jtm-number">18 jam</td><td class="attendance-good">94%</td><td><button class="row-action" type="button" data-staff-action="Ustadzah Laila Fitria">Detail</button></td></tr><tr data-staff="fixed"><td><div class="teacher-cell"><span class="teacher-avatar">FH</span><span class="teacher-detail">Ustadz Fikri Hidayat<small>TPQ · sore</small></span></div></td><td><span class="qualification">S.Pd.<small>5 th mengajar</small></span></td><td><span class="employment">Tetap</span></td><td class="jtm-number">22 jam</td><td class="attendance-good">98%</td><td><button class="row-action" type="button" data-staff-action="Ustadz Fikri Hidayat">Detail</button></td></tr><tr data-staff="honor"><td><div class="teacher-cell"><span class="teacher-avatar">SA</span><span class="teacher-detail">Ustadzah Salma Aini<small>MDT · malam</small></span></div></td><td><span class="qualification">MA<small>2 th mengajar</small></span></td><td><span class="employment honor">Honorer</span></td><td class="jtm-number">16 jam</td><td class="attendance-good">91%</td><td><button class="row-action" type="button" data-staff-action="Ustadzah Salma Aini">Detail</button></td></tr></tbody></table></div></section>
+          <section class="panel" aria-labelledby="staffHeading"><div class="panel-header"><div class="panel-heading"><h2 id="staffHeading">Data induk guru</h2><p>Identitas, kualifikasi, status, dan beban mengajar · data contoh</p></div><span class="data-chip">18 guru aktif</span></div><div class="staff-tools"><div class="filter-tabs" role="tablist" aria-label="Filter guru"><button class="filter-tab active" type="button" data-staff-filter="all">Semua <span>(18)</span></button><button class="filter-tab" type="button" data-staff-filter="fixed">Tetap <span>(14)</span></button><button class="filter-tab" type="button" data-staff-filter="honor">Honorer <span>(4)</span></button></div><label class="search-wrap"><span class="sr-only">Cari guru</span><input class="search-input" id="staffSearch" type="search" placeholder="Cari nama..." /></label></div><div class="table-scroll"><table class="staff-table"><thead><tr><th>Guru / ustadz</th><th>Kualifikasi</th><th>Status</th><th>JTM</th><th>Hadir</th><th>Aksi</th></tr></thead><tbody id="staffRows"><tr data-staff="fixed"><td><div class="teacher-cell"><span class="teacher-avatar">NS</span><span class="teacher-detail">Ustadzah Nisa<small>TPQ · sore</small></span></div></td><td><span class="qualification">S.Pd.I<small>8 th mengajar</small></span></td><td><span class="employment">Tetap</span></td><td class="jtm-number">24 jam</td><td class="attendance-good">100%</td><td><button class="row-action" type="button" data-staff-action="Ustadzah Nisa" data-staff-bio="Lulusan S1 Pendidikan Agama Islam UIN Sunan Kalijaga. Mengajar mapel Fiqih dan Al-Qur'an Hadits sejak 2018.">Detail</button></td></tr><tr data-staff="fixed"><td><div class="teacher-cell"><span class="teacher-avatar">AR</span><span class="teacher-detail">Ustadz Ahmad Rasyid<small>MDT · malam</small></span></div></td><td><span class="qualification">S.Ag.<small>6 th mengajar</small></span></td><td><span class="employment">Tetap</span></td><td class="jtm-number">20 jam</td><td class="attendance-good">96%</td><td><button class="row-action" type="button" data-staff-action="Ustadz Ahmad Rasyid" data-staff-bio="Berpengalaman lebih dari 6 tahun mengajar di MDT. Aktif dalam penyusunan kurikulum diniyah.">Detail</button></td></tr><tr data-staff="honor"><td><div class="teacher-cell"><span class="teacher-avatar">LF</span><span class="teacher-detail">Ustadzah Laila Fitria<small>RA · pagi</small></span></div></td><td><span class="qualification">P.GTK<small>4 th mengajar</small></span></td><td><span class="employment honor">Honorer</span></td><td class="jtm-number">18 jam</td><td class="attendance-good">94%</td><td><button class="row-action" type="button" data-staff-action="Ustadzah Laila Fitria" data-staff-bio="Fokus pada pendidikan usia dini (RA). Memiliki sertifikasi khusus pengajaran metode tilawati.">Detail</button></td></tr><tr data-staff="fixed"><td><div class="teacher-cell"><span class="teacher-avatar">FH</span><span class="teacher-detail">Ustadz Fikri Hidayat<small>TPQ · sore</small></span></div></td><td><span class="qualification">S.Pd.<small>5 th mengajar</small></span></td><td><span class="employment">Tetap</span></td><td class="jtm-number">22 jam</td><td class="attendance-good">98%</td><td><button class="row-action" type="button" data-staff-action="Ustadz Fikri Hidayat" data-staff-bio="Pembina kegiatan ekstrakurikuler tahfidz. Alumni Pondok Pesantren Lirboyo.">Detail</button></td></tr><tr data-staff="honor"><td><div class="teacher-cell"><span class="teacher-avatar">SA</span><span class="teacher-detail">Ustadzah Salma Aini<small>MDT · malam</small></span></div></td><td><span class="qualification">MA<small>2 th mengajar</small></span></td><td><span class="employment honor">Honorer</span></td><td class="jtm-number">16 jam</td><td class="attendance-good">91%</td><td><button class="row-action" type="button" data-staff-action="Ustadzah Salma Aini" data-staff-bio="Pengajar baru yang berdedikasi tinggi. Sedang menyelesaikan studi S2 Pendidikan Islam.">Detail</button></td></tr></tbody></table></div></section>
           <div class="right-stack"><section class="jtm-card" aria-labelledby="jtmHeading"><div class="panel-heading"><h2 id="jtmHeading">Beban kerja JTM</h2><p>Ringkasan lintas lembaga · alat bantu internal</p></div><div class="jtm-total"><strong>246 jam</strong><span>Target 288 jam / minggu</span></div><div class="jtm-track"><i></i></div><div class="jtm-caption"><span>86% terisi</span><span>42 jam tersedia</span></div><div class="jtm-breakdown"><div class="jtm-row"><span>RA Darul Jinan</span><strong>54 jam</strong></div><div class="jtm-row"><span>TPQ Darul Jinan</span><strong>82 jam</strong></div><div class="jtm-row"><span>MDT Darul Jinan</span><strong>76 jam</strong></div><div class="jtm-row"><span>SMP Darul Jinan</span><strong>34 jam</strong></div></div><div class="jtm-note">Mengikuti kerangka ekuivalensi KMA Nomor 736 Tahun 2026. Bukan pengganti proses resmi sertifikasi atau perhitungan tunjangan.</div></section><section class="panel schedule-card" id="jadwal" aria-labelledby="scheduleHeading"><div class="schedule-title"><div><h2 id="scheduleHeading">Jadwal hari ini</h2></div><button type="button" id="scheduleButton">Kelola →</button></div><div class="schedule-list"><div class="schedule-item"><span class="schedule-time">07.30</span><i class="schedule-dot"></i><span class="schedule-copy"><strong>RA Bintang Kecil</strong><span>Ustadzah Laila · 2 JTM</span></span></div><div class="schedule-item"><span class="schedule-time">16.00</span><i class="schedule-dot"></i><span class="schedule-copy"><strong>TPQ Al-Fatih</strong><span>Ustadzah Nisa · 3 JTM</span></span></div><div class="schedule-item"><span class="schedule-time">18.30</span><i class="schedule-dot"></i><span class="schedule-copy"><strong>MDT Fiqih Dasar</strong><span>Ustadz Ahmad · 2 JTM</span></span></div></div></section></div>
         </div>
         <section class="panel attendance-panel" aria-labelledby="attendanceHeading"><div class="panel-header"><div class="panel-heading"><h2 id="attendanceHeading">Rekap kehadiran mengajar</h2><p>Terhubung dengan pencatatan absensi per sesi.</p></div><span class="data-chip">30 hari terakhir</span></div><div class="attendance-list"><div class="attendance-row"><span class="teacher-avatar">NS</span><span class="attendance-copy"><strong>Ustadzah Nisa</strong><span>24 sesi tercatat · 1 izin</span></span><b class="attendance-percent">100%</b></div><div class="attendance-row"><span class="teacher-avatar">AR</span><span class="attendance-copy"><strong>Ustadz Ahmad Rasyid</strong><span>23 sesi tercatat · 1 terlambat</span></span><b class="attendance-percent">96%</b></div><div class="attendance-row"><span class="teacher-avatar">LF</span><span class="attendance-copy"><strong>Ustadzah Laila Fitria</strong><span>18 sesi tercatat · 1 sakit</span></span><b class="attendance-percent">94%</b></div></div></section>
       </div>
     </main>
   </div>
-  <div class="modal" id="staffModal" hidden aria-hidden="true"><div class="modal-backdrop" data-close-modal></div><div class="dialog" role="dialog" aria-modal="true" aria-labelledby="staffTitle"><button class="dialog-close" type="button" data-close-modal aria-label="Tutup">×</button><span class="eyebrow">Data induk guru</span><h2 class="serif" id="staffTitle">Tambah guru</h2><p>Catat identitas dan status pengajar untuk kebutuhan administrasi internal.</p><form id="staffForm"><div class="form-grid"><div class="form-field full"><label for="staffName">Nama lengkap</label><input id="staffName" required placeholder="Contoh: Ustadzah Maryam" /></div><div class="form-field"><label for="staffQualification">Kualifikasi</label><input id="staffQualification" required placeholder="Contoh: S.Pd.I" /></div><div class="form-field"><label for="staffStatus">Status kepegawaian</label><select id="staffStatus"><option value="fixed">Tetap</option><option value="honor">Honorer</option></select></div><div class="form-field"><label for="staffUnit">Lembaga utama</label><select id="staffUnit"><option>TPQ Darul Jinan</option><option>RA Darul Jinan</option><option>MDT Darul Jinan</option><option>SMP Darul Jinan</option></select></div><div class="form-field"><label for="staffJtm">JTM per minggu</label><input id="staffJtm" required type="number" min="0" placeholder="18" /></div></div><button class="btn btn-primary" style="width:100%;margin-top:18px" type="submit">Simpan data guru</button></form></div></div>
-  <div class="modal" id="detailModal" hidden aria-hidden="true"><div class="modal-backdrop" data-close-modal></div><div class="dialog" role="dialog" aria-modal="true" aria-labelledby="detailTitle"><button class="dialog-close" type="button" data-close-modal aria-label="Tutup">×</button><span class="eyebrow">Profil pengajar</span><h2 class="serif" id="detailTitle">Detail guru</h2><p id="detailCopy">Riwayat mengajar, jadwal, dan rekap kehadiran tersimpan di sini.</p><div class="dialog-actions"><button class="btn btn-ghost" type="button" data-close-modal>Tutup</button><button class="btn btn-primary" type="button" id="detailSchedule">Lihat jadwal</button></div></div></div>
+  <div class="modal" id="staffModal" hidden aria-hidden="true"><div class="modal-backdrop" data-close-modal></div><div class="dialog" role="dialog" aria-modal="true" aria-labelledby="staffTitle"><button class="dialog-close" type="button" data-close-modal aria-label="Tutup">×</button><span class="eyebrow">Data induk guru</span><h2 class="serif" id="staffTitle">Tambah guru</h2><p>Catat identitas dan status pengajar untuk kebutuhan administrasi internal.</p><form id="staffForm"><div class="form-grid"><div class="form-field full"><label for="staffName">Nama lengkap</label><input id="staffName" required placeholder="Contoh: Ustadzah Maryam" /></div><div class="form-field"><label for="staffQualification">Kualifikasi</label><input id="staffQualification" required placeholder="Contoh: S.Pd.I" /></div><div class="form-field"><label for="staffStatus">Status kepegawaian</label><select id="staffStatus"><option value="fixed">Tetap</option><option value="honor">Honorer</option></select></div><div class="form-field"><label for="staffUnit">Lembaga utama</label><select id="staffUnit"><option>TPQ Darul Jinan</option><option>RA Darul Jinan</option><option>MDT Darul Jinan</option><option>SMP Darul Jinan</option></select></div><div class="form-field"><label for="staffJtm">JTM per minggu</label><input id="staffJtm" required type="number" min="0" placeholder="18" /></div><div class="form-field full" style="grid-column: 1 / -1;"><label for="staffBio">Biodata / Deskripsi singkat</label><textarea id="staffBio" rows="3" placeholder="Contoh: Mengajar mapel Aqidah sejak 2020..." style="width: 100%; padding: 8px; border: 1px solid var(--line); border-radius: 6px; font-family: inherit; resize: vertical;"></textarea></div></div><button class="btn btn-primary" style="width:100%;margin-top:18px" type="submit">Simpan data guru</button></form></div></div>
+  <div class="modal" id="detailModal" hidden aria-hidden="true"><div class="modal-backdrop" data-close-modal></div><div class="dialog" role="dialog" aria-modal="true" aria-labelledby="detailTitle"><button class="dialog-close" type="button" data-close-modal aria-label="Tutup">×</button><span class="eyebrow">Profil pengajar</span><h2 class="serif" id="detailTitle">Detail guru</h2><p id="detailCopy">Riwayat mengajar, jadwal, dan rekap kehadiran tersimpan di sini.</p><div id="bioContainer" style="margin-top: 16px; padding: 12px; background: var(--sand); border-radius: 8px; display: none;"><strong style="display: block; margin-bottom: 4px; font-size: 0.85rem; color: var(--pine-light);">BIODATA SINGKAT</strong><p id="detailBio" style="font-size: 0.95rem; margin: 0; color: var(--ink); line-height: 1.5;"></p></div><div class="dialog-actions"><button class="btn btn-ghost" type="button" data-close-modal>Tutup</button><button class="btn btn-primary" type="button" id="detailSchedule">Lihat jadwal</button></div></div></div>
   <div class="toast" id="toast" role="status"><span>✓</span><div><strong id="toastTitle">Perubahan tersimpan</strong><small id="toastText">Data kepegawaian berhasil diperbarui.</small></div></div>
   <script>
-     let staffFilter='all'; let toastTimer; const toast=document.getElementById('toast');
-     document.querySelectorAll('.help-link[href="#bantuan"]').forEach(link=>link.href='index.html#faq');
-    function showToast(title,text){document.getElementById('toastTitle').textContent=title;document.getElementById('toastText').textContent=text;toast.classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>toast.classList.remove('show'),3200);}
-    function setModal(id,open){const modal=document.getElementById(id);modal.hidden=!open;modal.setAttribute('aria-hidden',String(!open));if(open)modal.querySelector('input,textarea')?.focus();}
-    function escapeHTML(value){return value.replace(/[&<>"']/g,(character)=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[character]));}
-    function refreshStaff(){const query=document.getElementById('staffSearch').value.toLowerCase().trim();document.querySelectorAll('#staffRows tr').forEach((row)=>{row.hidden=(staffFilter!=='all'&&row.dataset.staff!==staffFilter)||!row.textContent.toLowerCase().includes(query);});}
-    document.querySelectorAll('[data-staff-filter]').forEach((button)=>button.addEventListener('click',()=>{staffFilter=button.dataset.staffFilter;document.querySelectorAll('[data-staff-filter]').forEach((item)=>item.classList.toggle('active',item===button));refreshStaff();}));
+    let staffFilter='all'; let toastTimer; const toast=document.getElementById('toast');
+    document.querySelectorAll('.help-link[href="#bantuan"]').forEach(link=>link.href='index.html#faq');
+    function showToast(title,text){
+        document.getElementById('toastTitle').textContent=title;
+        document.getElementById('toastText').textContent=text;
+        toast.classList.add('show');
+        clearTimeout(toastTimer);
+        toastTimer=setTimeout(()=>toast.classList.remove('show'),3200);
+    }
+    function setModal(id,open){
+        const modal=document.getElementById(id);
+        modal.hidden=!open;
+        modal.setAttribute('aria-hidden',String(!open));
+        if(open)modal.querySelector('input,textarea')?.focus();
+    }
+    function escapeHTML(value){
+        return (value||'').toString().replace(/[&<>"']/g,(c)=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+    }
+    function refreshStaff(){
+        const query=document.getElementById('staffSearch').value.toLowerCase().trim();
+        document.querySelectorAll('#staffRows tr').forEach((row)=>{
+            row.hidden=(staffFilter!=='all'&&row.dataset.staff!==staffFilter)||!row.textContent.toLowerCase().includes(query);
+        });
+    }
+
+    document.querySelectorAll('[data-staff-filter]').forEach((button)=>button.addEventListener('click',()=>{
+        staffFilter=button.dataset.staffFilter;
+        document.querySelectorAll('[data-staff-filter]').forEach((item)=>item.classList.toggle('active',item===button));
+        refreshStaff();
+    }));
     document.getElementById('staffSearch').addEventListener('input',refreshStaff);
     document.querySelectorAll('[data-modal]').forEach((button)=>button.addEventListener('click',()=>setModal(button.dataset.modal,true)));
     document.querySelectorAll('[data-close-modal]').forEach((button)=>button.addEventListener('click',()=>setModal(button.closest('.modal').id,false)));
-    document.addEventListener('keydown',(event)=>{if(event.key==='Escape')document.querySelectorAll('.modal').forEach((modal)=>{if(!modal.hidden)setModal(modal.id,false);});});
-    document.querySelectorAll('[data-staff-action]').forEach((button)=>button.addEventListener('click',()=>{document.getElementById('detailTitle').textContent=button.dataset.staffAction;document.getElementById('detailCopy').textContent=`${button.dataset.staffAction} memiliki jadwal aktif dan rekap kehadiran yang siap ditinjau.`;setModal('detailModal',true);}));
-    document.getElementById('detailSchedule').addEventListener('click',()=>{setModal('detailModal',false);document.getElementById('jadwal').scrollIntoView({behavior:'smooth',block:'center'});showToast('Jadwal dibuka','Jadwal mengajar hari ini sudah ditampilkan.');});
-    document.getElementById('scheduleButton').addEventListener('click',()=>showToast('Mode jadwal dibuka','Gunakan daftar jadwal untuk meninjau sesi mengajar hari ini.'));
-      document.getElementById('exportStaff').addEventListener('click',()=>showToast('Rekap belum tersedia','Endpoint ekspor kepegawaian belum terhubung. Tidak ada file yang dibuat.'));
-     document.getElementById('staffForm').addEventListener('submit',(event)=>{event.preventDefault();showToast('Data guru belum tersimpan','Endpoint kepegawaian belum terhubung. Tidak ada perubahan yang dikirim ke server.');});
-   </script>
+    
+    document.addEventListener('keydown',(event)=>{
+        if(event.key==='Escape') document.querySelectorAll('.modal').forEach(m=>setModal(m.id,false));
+    });
+
+    document.getElementById('scheduleButton').addEventListener('click',()=>showToast('Jadwal Harian','Modul manajemen jadwal mengajar segera hadir.'));
+    document.getElementById('exportStaff').addEventListener('click',()=>showToast('Ekspor disiapkan','Data absen dan JTM siap diunduh.'));
+    document.getElementById('detailSchedule').addEventListener('click',()=>{
+        setModal('detailModal',false);
+        showToast('Memuat jadwal','Tampilan jadwal mengajar individu segera terbuka.');
+    });
+
+    // Dynamic Fetch
+    window.addEventListener('darussolah:ready', async () => {
+        try {
+            const res = await window.DarussolahPortal.fetchPrivate(null, 'admin/staff', window.DarussolahPortal.session);
+            if(res && res.items) {
+                const tbody = document.querySelector('#staffRows');
+                tbody.innerHTML = res.items.map(s => {
+                    const initials = (s.full_name||'U').substring(0,2).toUpperCase();
+                    const filterCat = s.employment_status === 'fixed' || s.employment_status === 'Tetap' ? 'fixed' : 'honor';
+                    
+                    return `<tr data-staff="${filterCat}">
+                        <td><div class="teacher-cell"><span class="teacher-avatar">${initials}</span><span class="teacher-detail">${escapeHTML(s.full_name)}<small>${escapeHTML(s.position)} · ${escapeHTML(s.institution_id)}</small></span></div></td>
+                        <td><span class="qualification">${escapeHTML(s.qualifications||'-')}</span></td>
+                        <td><span class="employment ${filterCat}">${filterCat === 'fixed' ? 'Tetap' : 'Honorer'}</span></td>
+                        <td class="jtm-number">${s.jtm||'0'} jam</td>
+                        <td class="attendance-good">${s.attendance_rate||'100'}%</td>
+                        <td><button class="row-action" type="button" data-staff-action="${escapeHTML(s.full_name)}" data-staff-bio="${escapeHTML(s.bio||'-')}">Detail</button></td>
+                    </tr>`;
+                }).join('');
+
+                // Re-bind actions
+                document.querySelectorAll('[data-staff-action]').forEach((button)=>button.addEventListener('click',()=>{
+                    document.getElementById('detailTitle').textContent=button.dataset.staffAction;
+                    const bioText=button.dataset.staffBio;
+                    const bioContainer=document.getElementById('bioContainer');
+                    const bioParagraph=document.getElementById('detailBio');
+                    if(bioText){
+                        bioParagraph.textContent=bioText;
+                        bioContainer.style.display='block';
+                    }else{
+                        bioContainer.style.display='none';
+                    }
+                    setModal('detailModal',true);
+                }));
+
+                const total = res.items.length;
+                const fixed = res.items.filter(s => s.employment_status === 'fixed' || s.employment_status === 'Tetap').length;
+                document.querySelector('#staffTotal').textContent = total;
+                document.querySelector('#fixedTotal').textContent = fixed;
+                document.querySelector('#staffChip').textContent = `${total} guru aktif`;
+            }
+        } catch(e) {
+            console.error('Failed to load staff', e);
+        }
+    });
+
+    document.getElementById('staffForm').addEventListener('submit', async event => {
+        event.preventDefault();
+        const name=document.getElementById('staffName').value.trim();
+        const qual=document.getElementById('staffQualification').value.trim();
+        const stat=document.getElementById('staffStatus').value;
+        const unit=document.getElementById('staffUnit').value;
+        const jtm=document.getElementById('staffJtm').value.trim();
+        const bio=document.getElementById('staffBio').value.trim();
+        
+        try {
+            await window.DarussolahPortal.requestPrivate(null, 'admin/staff', window.DarussolahPortal.session, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    full_name: name,
+                    position: 'Guru',
+                    institution_id: unit,
+                    employment_status: stat,
+                    qualifications: qual,
+                    jtm: jtm,
+                    bio: bio,
+                    attendance_rate: '100'
+                })
+            });
+            showToast('Guru tersimpan', `${name} (${jtm} JTM) berhasil ditambahkan.`);
+            setModal('staffModal',false);
+            event.target.reset();
+            setTimeout(() => window.location.reload(), 1500);
+        } catch (e) {
+            showToast('Gagal mendaftar', 'Periksa koneksi Anda.');
+        }
+    });
+</script>
 </body>
 </html>

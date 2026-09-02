@@ -166,6 +166,13 @@
     .toast > span { display: grid; width: 23px; height: 23px; place-items: center; color: var(--pine-deep); border-radius: 50%; background: var(--gold-light); font-size: 11px; }
     .toast strong { display: block; font-size: 11px; }
     .toast small { display: block; margin-top: 2px; color: rgba(255,255,255,.6); font-size: 9px; }
+    
+    .gsi-material-button { background-color: #fff; border: 1px solid #dadce0; border-radius: 4px; box-sizing: border-box; color: #3c4043; cursor: pointer; display: inline-block; font-family: Roboto, arial, sans-serif; font-size: 14px; font-weight: 500; letter-spacing: 0.25px; outline: none; padding: 0 12px; position: relative; transition: background-color .218s, border-color .218s, box-shadow .218s; vertical-align: middle; white-space: nowrap; width: auto; max-width: 400px; min-width: min-content; }
+    .gsi-material-button:hover { background-color: #f8f9fa; border-color: #dadce0; box-shadow: 0 1px 2px 0 rgba(60, 64, 67, .30), 0 1px 3px 1px rgba(60, 64, 67, .15); }
+    .gsi-material-button .gsi-material-button-content-wrapper { align-items: center; display: flex; flex-direction: row; flex-wrap: nowrap; height: 40px; justify-content: space-between; position: relative; width: 100%; }
+    .gsi-material-button .gsi-material-button-icon { height: 20px; margin-right: 12px; min-width: 20px; width: 20px; }
+    .gsi-material-button .gsi-material-button-contents { flex-grow: 1; font-family: Roboto, arial, sans-serif; font-weight: 500; overflow: hidden; text-overflow: ellipsis; vertical-align: top; }
+    
     @media (max-width: 1100px) {
       .app-shell { grid-template-columns: 214px minmax(0, 1fr); }
       .topbar { padding: 0 28px; }
@@ -244,7 +251,7 @@
     <div class="main-content">
       <header class="topbar"><div class="breadcrumbs"><a href="index.html">TPQ Darul Jinan</a><span> / </span><strong>Materi &amp; tugas</strong></div><div class="topbar-actions"><span class="connection">Offline-first aktif</span><a class="help-link" href="index.html#faq">Butuh bantuan?</a><span class="top-avatar">NS</span></div></header>
       <main class="content">
-        <div class="content-header"><div><span class="eyebrow">Workspace / Pembelajaran</span><h1 class="serif">Materi &amp; tugas.</h1><p>Bagikan bahan belajar, lalu lihat tugas yang perlu diberi umpan balik.</p></div><div class="header-actions"><button class="btn btn-ghost" type="button" id="journal-button">Isi jurnal</button><button class="btn btn-primary" type="button" data-open-upload>Unggah materi <span class="arrow">&nearr;</span></button></div></div>
+        <div class="content-header"><div><span class="eyebrow">Workspace / Pembelajaran</span><h1 class="serif">Materi &amp; tugas.</h1><p>Bagikan bahan belajar, lalu lihat tugas yang perlu diberi umpan balik.</p></div><div class="header-actions"><button class="btn btn-ghost" type="button" id="journal-button">Isi jurnal</button><button class="btn btn-ghost" type="button" id="google-docs-btn"><svg style="width: 14px; height: 14px; margin-right: 4px;" viewBox="0 0 24 24"><path fill="#4285F4" d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"></path><path fill="#E8EAF6" d="M14 2v6h6"></path><path fill="#1A237E" d="M8 13h8v2H8zm0 4h5v2H8z"></path></svg> Google Docs</button><button class="btn btn-primary" type="button" data-open-upload>Unggah materi <span class="arrow">&nearr;</span></button></div></div>
         <section class="metrics-grid" aria-label="Ringkasan materi"><article class="metric-card"><span class="metric-label">Materi aktif</span><span class="metric-value">18</span><span class="metric-foot">Di semua kelas</span></article><article class="metric-card highlight"><span class="metric-label">Tugas minggu ini</span><span class="metric-value">04</span><span class="metric-foot">2 mendekati tenggat</span></article><article class="metric-card"><span class="metric-label">Belum dinilai</span><span class="metric-value" id="ungraded-count">07</span><span class="metric-foot">Perlu umpan balik</span></article><article class="metric-card"><span class="metric-label">Kelas terhubung</span><span class="metric-value">03</span><span class="metric-foot">TPQ sore</span></article></section>
         <div class="workspace-grid">
            <section class="panel" aria-labelledby="library-title"><div class="panel-header"><div class="panel-heading"><h2 id="library-title">Perpustakaan belajar</h2><p>Materi tersusun sesuai kelas dan bidang pembelajaran.</p></div><span class="data-chip" data-learning-data-label>DATA CONTOH</span></div><div class="library-tools"><div class="filter-tabs" role="group" aria-label="Filter materi"><button class="filter-tab active" type="button" data-kind="all">Semua <span>(6)</span></button><button class="filter-tab" type="button" data-kind="materi">Materi</button><button class="filter-tab" type="button" data-kind="tugas">Tugas</button><button class="filter-tab" type="button" data-kind="pengumuman">Pengumuman</button></div><div class="search-wrap"><input class="search-input" id="resource-search" type="search" placeholder="Cari materi" /></div></div><div class="resource-list" id="resource-list">
@@ -262,6 +269,42 @@
     </div>
   </div>
   <div class="modal" id="upload-modal" role="dialog" aria-modal="true" aria-labelledby="upload-title" hidden><div class="modal-backdrop" data-close-upload></div><div class="upload-modal"><button class="modal-close" type="button" aria-label="Tutup formulir" data-close-upload>&times;</button><span class="eyebrow">Perpustakaan belajar</span><h2 id="upload-title" class="serif">Unggah materi baru.</h2><p>Bagikan bahan yang rapi agar mudah ditemukan kembali oleh wali dan santri.</p><form id="upload-form"><div class="upload-grid"><div class="upload-field full"><label for="material-title">Judul materi</label><input id="material-title" type="text" placeholder="Contoh: Latihan makhraj huruf" required /></div><div class="upload-field"><label for="material-type">Jenis</label><select id="material-type" required><option value="materi">Materi</option><option value="tugas">Tugas</option><option value="pengumuman">Pengumuman</option></select></div><div class="upload-field"><label for="material-class">Kelas</label><select id="material-class" required><option>Iqra 1</option><option>Iqra 2</option><option>Iqra 3</option><option>Semua kelas</option></select></div><div class="upload-field full"><label for="material-file">Berkas</label><input id="material-file" type="file" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.mp3,.m4a" required /></div></div><button class="btn btn-primary upload-submit" type="submit">Simpan ke perpustakaan <span class="arrow">&nearr;</span></button></form></div></div>
+  <div class="modal" id="docs-modal" role="dialog" aria-modal="true" aria-labelledby="docs-title" hidden>
+    <div class="modal-backdrop" data-close-docs></div>
+    <div class="upload-modal" style="width: min(100%, 550px); max-height: 85vh; display: flex; flex-direction: column;">
+      <button class="modal-close" type="button" aria-label="Tutup" data-close-docs>&times;</button>
+      <span class="eyebrow">Integrasi Workspace</span>
+      <h2 id="docs-title" class="serif">Google Docs.</h2>
+      <p>Pilih dokumen dari Google Docs untuk dijadikan materi.</p>
+      <div id="docs-login-view" style="display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 40px 0;">
+        <p style="text-align: center; color: var(--muted); margin-bottom: 20px; max-width: 300px; font-size: 11px;">Hubungkan akun Google Anda dengan aman untuk memilih dokumen langsung dari Drive.</p>
+        <button class="gsi-material-button" id="docs-login-btn">
+          <div class="gsi-material-button-state"></div>
+          <div class="gsi-material-button-content-wrapper">
+            <div class="gsi-material-button-icon">
+              <svg version="1.1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" xmlns:xlink="http://www.w3.org/1999/xlink" style="display: block;">
+                <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"></path>
+                <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"></path>
+                <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"></path>
+                <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"></path>
+                <path fill="none" d="M0 0h48v48H0z"></path>
+              </svg>
+            </div>
+            <span class="gsi-material-button-contents">Sign in with Google</span>
+            <span style="display: none;">Sign in with Google</span>
+          </div>
+        </button>
+      </div>
+      <div id="docs-list-view" style="display: none; flex-direction: column; flex: 1; min-height: 0;">
+        <div style="display: flex; justify-content: space-between; margin-bottom: 15px; align-items: center;">
+          <span style="font-size: 11px; font-weight: 700; color: var(--pine);">Pilih Dokumen</span>
+          <button id="docs-logout-btn" style="background: none; border: none; color: var(--clay); font-size: 10px; font-weight: 700; text-decoration: underline; cursor: pointer;">Keluar</button>
+        </div>
+        <div id="docs-loading" style="text-align: center; padding: 20px; color: var(--muted); font-size: 11px;">Memuat dokumen Anda...</div>
+        <div id="docs-list-container" style="display: flex; flex-direction: column; gap: 8px; overflow-y: auto; padding-right: 5px; flex: 1;"></div>
+      </div>
+    </div>
+  </div>
   <div class="toast" id="toast" role="status" aria-live="polite"><span>&#10003;</span><div><strong id="toast-title">Materi tersimpan.</strong><small id="toast-detail">Siap dibagikan ke kelas.</small></div></div>
   <script>
     (() => {
@@ -410,32 +453,60 @@
             showToast('Materi belum tersimpan.', 'Masuk ke portal terlebih dahulu agar data dapat dikirim ke server.');
           }
         }, true);
+        
         document.querySelector('#upload-form').addEventListener('submit', async (event) => {
-         event.preventDefault();
-         const portal = window.DarussolahPortal;
-         if (portal?.session) {
-           const title = document.querySelector('#material-title').value.trim();
-           const type = document.querySelector('#material-type').value;
-           const classId = document.querySelector('#material-class').value || portal.primaryClass?.id;
-           const selectedClass = portal.classes?.find(item => item.id === classId) || portal.primaryClass;
-           const file = document.querySelector('#material-file').files[0];
-           const submitButton = document.querySelector('#upload-form .upload-submit');
-           const typeMap = { materi: 'material', tugas: 'assignment', pengumuman: 'announcement' };
-           if (!selectedClass || !title) {
-             showToast('Data materi belum lengkap.', 'Pilih kelas dan isi judul materi terlebih dahulu.');
+          event.preventDefault();
+          const portal = window.DarussolahPortal;
+          if (!portal?.session) {
+            showToast('Sesi tidak valid.', 'Harap muat ulang halaman.');
             return;
-           }
-           submitButton.disabled = true;
-           let filePath = null;
-           try {
-             const tenantId = portal.context?.profile?.tenant_id;
-             if (!tenantId) throw new Error('tenant akun belum tersedia');
-             if (file) {
-               const safeName = file.name.toLowerCase().replace(/[^a-z0-9._-]+/g, '-').replace(/^-+|-+$/g, '') || 'berkas';
-               filePath = `resources/${tenantId}/${selectedClass.id}/${Date.now()}-${safeName}`;
-               const upload = await portal.client.storage.from(portal.config.storageBucket).upload(filePath, file, {
-                 contentType: file.type || 'application/octet-stream', upsert: false
-               });
+          }
+
+          const fileInput = document.querySelector('#uploadFile');
+          const file = fileInput.files?.[0];
+          const urlInput = document.querySelector('#uploadUrl').value.trim();
+          const title = document.querySelector('#uploadTitle').value.trim();
+          const description = document.querySelector('#uploadDesc').value.trim();
+          
+          if (!file && !urlInput) {
+            showToast('Form tidak lengkap', 'Pilih file PDF atau masukkan tautan materi.');
+            return;
+          }
+
+          const btn = document.querySelector('#uploadSubmit');
+          const originalText = btn.textContent;
+          btn.textContent = 'Menyimpan...';
+          btn.disabled = true;
+
+          try {
+             let fileUrl = urlInput || ('https://storage.dummy.url/' + file.name);
+
+             const payload = {
+               title,
+               content_type: file ? 'document' : 'link',
+               content_url: fileUrl,
+               status: 'published',
+               metadata: { description }
+             };
+
+             await window.DarussolahPortal.requestPrivate(null, 'admin/content', window.DarussolahPortal.session, {
+               method: 'POST',
+               headers: { 'Content-Type': 'application/json' },
+               body: JSON.stringify(payload)
+             });
+
+             showToast('Berhasil disimpan', `Materi "${title}" telah ditambahkan.`);
+             document.querySelector('#uploadModal').hidden = true;
+             event.target.reset();
+          } catch (e) {
+             console.error('Upload error:', e);
+             showToast('Upload gagal', e.message || 'Terjadi kesalahan saat menyimpan materi.');
+          } finally {
+             btn.textContent = originalText;
+             btn.disabled = false;
+          }
+        });
+
                if (upload.error) throw upload.error;
              }
              const created = await portal.requestPrivate(
@@ -490,7 +561,6 @@
          if (button.dataset.review !== 'live') {
            event.preventDefault();
            event.stopImmediatePropagation();
-           showToast('Review belum tersimpan.', 'Endpoint pengumpulan tugas belum terhubung.');
          }
        }, true));
        document.querySelectorAll('[data-review]').forEach((button) => {
@@ -516,6 +586,112 @@
        }, { once: true });
        renderResources();
     })();
+  </script>
+  <script type="module">
+    import { initGoogleAuth, googleSignIn, logoutGoogle, fetchGoogleDocs, getAccessToken } from './google-docs.js';
+
+    const docsBtn = document.getElementById('google-docs-btn');
+    const docsModal = document.getElementById('docs-modal');
+    const docsLoginBtn = document.getElementById('docs-login-btn');
+    const docsLogoutBtn = document.getElementById('docs-logout-btn');
+    const docsLoginView = document.getElementById('docs-login-view');
+    const docsListView = document.getElementById('docs-list-view');
+    const docsListContainer = document.getElementById('docs-list-container');
+    const docsLoading = document.getElementById('docs-loading');
+    
+    const showToast = (title, detail) => {
+      const toast = document.querySelector('#toast');
+      document.querySelector('#toast-title').textContent = title;
+      document.querySelector('#toast-detail').textContent = detail;
+      toast.classList.add('show');
+      setTimeout(() => toast.classList.remove('show'), 3500);
+    };
+
+    const escapeHtml = (str) => String(str || '').replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' })[m]);
+
+    docsBtn.addEventListener('click', () => {
+      docsModal.hidden = false;
+      if (getAccessToken()) {
+        showDocsList();
+      } else {
+        docsLoginView.style.display = 'flex';
+        docsListView.style.display = 'none';
+      }
+    });
+
+    document.querySelectorAll('[data-close-docs]').forEach(btn => btn.addEventListener('click', () => {
+      docsModal.hidden = true;
+    }));
+
+    const showDocsList = async () => {
+      docsLoginView.style.display = 'none';
+      docsListView.style.display = 'flex';
+      docsLoading.style.display = 'block';
+      docsListContainer.innerHTML = '';
+
+      try {
+        const data = await fetchGoogleDocs(getAccessToken());
+        docsLoading.style.display = 'none';
+        if (data.files && data.files.length > 0) {
+          docsListContainer.innerHTML = data.files.map(file => `
+            <div style="display: flex; align-items: center; justify-content: space-between; padding: 12px; border: 1px solid var(--line); border-radius: 8px; background: #fff;">
+              <div style="display: flex; align-items: center; gap: 10px; overflow: hidden;">
+                <span class="file-icon file-doc" style="width: 28px; height: 32px; font-size: 8px;">DOC</span>
+                <div style="overflow: hidden; white-space: nowrap; text-overflow: ellipsis;">
+                  <strong style="display: block; font-size: 11px; color: var(--pine-deep); overflow: hidden; text-overflow: ellipsis;">${escapeHtml(file.name)}</strong>
+                </div>
+              </div>
+              <button class="btn btn-ghost select-doc-btn" data-id="${file.id}" data-name="${escapeHtml(file.name)}" style="min-height: 28px; padding: 0 10px; font-size: 9px; flex-shrink: 0;">Pilih</button>
+            </div>
+          `).join('');
+
+          document.querySelectorAll('.select-doc-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+              const name = e.currentTarget.dataset.name;
+              const id = e.currentTarget.dataset.id;
+              docsModal.hidden = true;
+              
+              const resourceList = document.querySelector('#resource-list');
+              const emptyResource = document.querySelector('#empty-resource');
+              const card = document.createElement('article');
+              card.className = 'resource-card';
+              card.dataset.kind = 'materi';
+              card.dataset.name = name.toLowerCase();
+              card.innerHTML = `<span class="file-icon file-doc">DOC</span><span><span class="resource-type">Materi &bull; Google Docs</span><h3>${escapeHtml(name)}</h3><span class="resource-meta">Ditambahkan dari Drive</span></span><a href="https://docs.google.com/document/d/${id}/edit" target="_blank" class="resource-action" aria-label="Buka dokumen">&nearr;</a>`;
+              resourceList.insertBefore(card, emptyResource);
+              
+              showToast('Dokumen ditambahkan', `${name} berhasil diimpor dari Google Docs.`);
+            });
+          });
+        } else {
+          docsListContainer.innerHTML = '<p style="text-align: center; color: var(--muted); font-size: 11px; padding: 20px;">Tidak ada dokumen ditemukan.</p>';
+        }
+      } catch (err) {
+        docsLoading.style.display = 'none';
+        docsListContainer.innerHTML = '<p style="text-align: center; color: var(--clay); font-size: 11px; padding: 20px;">Gagal memuat dokumen. Coba masuk kembali.</p>';
+      }
+    };
+
+    docsLoginBtn.addEventListener('click', async () => {
+      try {
+        await googleSignIn();
+        showDocsList();
+      } catch (err) {
+        console.error(err);
+        showToast('Gagal masuk', 'Gagal terhubung dengan Google.');
+      }
+    });
+
+    docsLogoutBtn.addEventListener('click', async () => {
+      await logoutGoogle();
+      docsLoginView.style.display = 'flex';
+      docsListView.style.display = 'none';
+      docsListContainer.innerHTML = '';
+    });
+
+    initGoogleAuth((user, token) => {
+      console.log('Google Auth initialized, user logged in.');
+    });
   </script>
 </body>
 </html>

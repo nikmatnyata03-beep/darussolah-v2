@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html>
+<head><title>Seed Users</title></head>
+<body>
+<script type="module">
+import { initializeApp } from 'https://www.gstatic.com/firebasejs/11.0.1/firebase-app.js';
+import { getAuth, createUserWithEmailAndPassword } from 'https://www.gstatic.com/firebasejs/11.0.1/firebase-auth.js';
+
+async function run() {
+  try {
+    const res = await fetch('/firebase-applet-config.json');
+    const config = await res.json();
+    const app = initializeApp(config);
+    const auth = getAuth(app);
+
+    const admin = await createUserWithEmailAndPassword(auth, 'admin@darussolah.com', 'password123');
+    console.log('Created Admin:', admin.user.uid);
+    
+    // We would insert this UID into the SQL database here...
+  } catch (err) {
+    console.error(err);
+  }
+}
+run();
+</script>
+</body>
+</html>
