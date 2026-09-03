@@ -10,6 +10,7 @@ export const users = pgTable('users', {
 
 export const attendance = pgTable('attendance', {
   id: serial('id').primaryKey(),
+  institutionId: integer('institution_id').references(() => institutions.id),
   uid: text('uid').references(() => users.uid).notNull(),
   status: text('status').notNull(),
   date: text('date').notNull(),
@@ -59,13 +60,23 @@ export const registrations = pgTable('registrations', {
   registrationType: text('registration_type'),
   academicYear: text('academic_year'),
   studentFullName: text('student_full_name').notNull(),
+  birthPlace: text('birth_place'),
+  birthDate: text('birth_date'),
+  gender: text('gender'),
+  address: text('address'),
+  fatherName: text('father_name'),
   fatherPhone: text('father_phone'),
+  motherName: text('mother_name'),
+  motherPhone: text('mother_phone'),
+  documents: text('documents'),
+  notes: text('notes'),
   status: text('status').notNull().default('pending'),
   createdAt: timestamp('created_at').defaultNow(),
 });
 
 export const students = pgTable('students', {
   id: serial('id').primaryKey(),
+  institutionId: integer('institution_id').references(() => institutions.id),
   fullName: text('full_name').notNull(),
   nis: text('nis'),
   status: text('status').default('active'),
@@ -87,6 +98,7 @@ export const staff = pgTable('staff', {
 
 export const content = pgTable('content', {
   id: serial('id').primaryKey(),
+  institutionId: integer('institution_id').references(() => institutions.id),
   siteKind: text('site_kind'),
   contentType: text('content_type'),
   slug: text('slug'),
@@ -99,6 +111,7 @@ export const content = pgTable('content', {
 
 export const adminRecords = pgTable('admin_records', {
   id: serial('id').primaryKey(),
+  institutionId: integer('institution_id').references(() => institutions.id),
   module: text('module').notNull(),
   recordKey: text('record_key').notNull(),
   entityId: text('entity_id'),
@@ -109,6 +122,7 @@ export const adminRecords = pgTable('admin_records', {
 
 export const invoices = pgTable('invoices', {
   id: serial('id').primaryKey(),
+  institutionId: integer('institution_id').references(() => institutions.id),
   studentId: integer('student_id').references(() => students.id),
   amount: text('amount').notNull(),
   status: text('status').default('unpaid'),
@@ -118,6 +132,7 @@ export const invoices = pgTable('invoices', {
 
 export const studentProgress = pgTable('student_progress', {
   id: serial('id').primaryKey(),
+  institutionId: integer('institution_id').references(() => institutions.id),
   studentId: integer('student_id').references(() => students.id),
   target: text('target'),
   currentValue: text('current_value'),
@@ -127,6 +142,7 @@ export const studentProgress = pgTable('student_progress', {
 
 export const leaveRequests = pgTable('leave_requests', {
   id: serial('id').primaryKey(),
+  institutionId: integer('institution_id').references(() => institutions.id),
   studentId: integer('student_id').references(() => students.id),
   date: text('date').notNull(),
   leaveType: text('leave_type'),
@@ -137,6 +153,7 @@ export const leaveRequests = pgTable('leave_requests', {
 
 export const feedbacks = pgTable('feedbacks', {
   id: serial('id').primaryKey(),
+  institutionId: integer('institution_id').references(() => institutions.id),
   message: text('message').notNull(),
   createdAt: timestamp('created_at').defaultNow(),
 });

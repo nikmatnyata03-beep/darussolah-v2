@@ -1,3 +1,29 @@
+
+// Inject Admin Dashboard toggle in footer
+document.addEventListener('DOMContentLoaded', () => {
+  const footers = document.querySelectorAll('.footer-bottom, .footer-note');
+  footers.forEach(footer => {
+    if (!footer.querySelector('.admin-edit-toggle')) {
+      const link = document.createElement('a');
+      link.className = 'admin-edit-toggle';
+      link.href = '#';
+      link.style = 'color: inherit; text-decoration: underline; margin-left: 10px; font-size: 0.9em;';
+      link.textContent = 'Admin Dashboard (Edit Mode)';
+      link.addEventListener('click', (e) => {
+        e.preventDefault();
+        const u = new URL(window.location.href);
+        if (u.searchParams.get('edit') === 'true') {
+          u.searchParams.delete('edit');
+        } else {
+          u.searchParams.set('edit', 'true');
+        }
+        window.location.href = u.toString();
+      });
+      footer.appendChild(link);
+    }
+  });
+});
+
 // Visual Builder Logic
 if (new URLSearchParams(window.location.search).get('edit') === 'true') {
   document.addEventListener('DOMContentLoaded', () => {
@@ -100,17 +126,87 @@ if (new URLSearchParams(window.location.search).get('edit') === 'true') {
     document.body.appendChild(toolbar);
 
     // Make text editable
-    const textSelectors = 'h1, h2, h3, p, .eyebrow, .unit-tag, .unit-seal, .slider-btn, .testi-quote, .testi-name, .testi-role, .bio-name, .bio-unit, .bio-text, .btn, .text-link';
+    const textSelectors = 'blockquote, [data-about], [data-quote], h1, h2, h3, p, .eyebrow, .unit-tag, .unit-seal, .slider-btn, .testi-quote, .testi-name, .testi-role, .bio-name, .bio-unit, .bio-text, .btn, .text-link';
     document.querySelectorAll(textSelectors).forEach(el => {
       // Don't make buttons that have complex interactions editable if it breaks them, 
       // but for simple text it's fine.
       if (!el.closest('.editor-toolbar') && !el.closest('.section-controls')) {
-        el.setAttribute('contenteditable', 'true');
+        
+        // Use prompt for text editing
+        
+        
+        el.addEventListener('click', async (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          const currentText = el.innerText || el.textContent;
+          const newText = prompt('Edit teks:', currentText.trim());
+          if (newText !== null && newText !== currentText) {
+            el.textContent = newText;
+            
+            // Check if it's a tenant specific field
+            let key = null;
+            if (el.hasAttribute('data-about')) key = 'about';
+            if (el.hasAttribute('data-quote')) key = 'quote';
+            
+            const tenantSlug = document.body.dataset.institution;
+            
+            if (key && tenantSlug && tenantSlug !== 'REPLACE_TENANT') {
+              try {
+                const res = await fetch('/api/tenant/save-content', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ tenant_slug: tenantSlug, key: key, value: newText })
+                });
+                if (!res.ok) alert('Gagal menyimpan konten spesifik lembaga.');
+              } catch (err) {
+                console.error(err);
+              }
+            }
+          }
+        });
+
+
+
         el.classList.add('editable-hover');
         // Prevent default click actions on editable links/buttons
         if(el.tagName === 'A' || el.tagName === 'BUTTON') {
           el.addEventListener('click', (e) => e.preventDefault());
         }
+      }
+    });
+
+    
+    // Add Image Editing Controls
+    document.querySelectorAll('.modal-img-container').forEach(container => {
+      if (!container.querySelector('.edit-img-btn')) {
+        const btn = document.createElement('button');
+        btn.className = 'editor-btn edit-img-btn';
+        btn.innerHTML = '✎ Ubah Foto';
+        btn.style.position = 'absolute';
+        btn.style.bottom = '-10px';
+        btn.style.left = '50%';
+        btn.style.transform = 'translateX(-50%)';
+        btn.style.padding = '4px 8px';
+        btn.style.fontSize = '10px';
+        btn.style.whiteSpace = 'nowrap';
+        btn.style.zIndex = '10';
+        
+        btn.addEventListener('click', (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          const img = container.querySelector('img');
+          const newUrl = prompt('Masukkan URL gambar baru (Anda dapat menyalin link gambar (Image Address) dari web):', img.src);
+          if (newUrl) {
+            img.src = newUrl;
+            // Sinkronkan juga gambar di kartu luar
+            if (img.id && img.id.startsWith('modal-img-')) {
+               const bioId = img.id.replace('modal-img-', '');
+               const cardImg = document.querySelector(`[data-open="bio-${bioId}"] .bio-image`);
+               if (cardImg) cardImg.src = newUrl;
+            }
+          }
+        });
+        container.appendChild(btn);
       }
     });
 
@@ -194,20 +290,23 @@ if (new URLSearchParams(window.location.search).get('edit') === 'true') {
       if (toolbarNode) toolbarNode.remove();
       
       clone.querySelectorAll('.section-controls').forEach(el => el.remove());
+            clone.querySelectorAll('.edit-img-btn').forEach(el => el.remove());
+            
       
       clone.querySelectorAll('[contenteditable]').forEach(el => {
-        el.removeAttribute('contenteditable');
+        
         el.classList.remove('editable-hover');
         if(el.classList.length === 0) el.removeAttribute('class');
       });
       
-      const finalHtml = '<!DOCTYPE html>\\n' + clone.outerHTML;
+      clone.querySelectorAll('.modal').forEach(m => { m.hidden = true; });
+            const finalHtml = '<!DOCTYPE html>\\n' + clone.outerHTML;
       
       try {
         const res = await fetch('/api/page/save', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ html: finalHtml })
+          body: JSON.stringify({ html: finalHtml, pathname: window.location.pathname })
         });
         
         if (res.ok) {

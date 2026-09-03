@@ -4,5 +4,5 @@ window.DARUSSOLAH_CONFIG = Object.freeze({
   supabaseUrl: 'https://kvapcykpscswsqsylzly.supabase.co',
   supabaseAnonKey: 'sb_publishable_RCXquVk_9fh463_rxXtJOg_tMb3GBLg',
   storageBucket: 'learning-submissions',
-  tenantSlug: 'yayasan-darussolah-wal-jinan'
+  tenantSlug: 'darussolah'
 });

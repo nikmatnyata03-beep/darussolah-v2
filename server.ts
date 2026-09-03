@@ -3,14 +3,26 @@ import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { requireAuth } from './src/middleware/auth.ts';
+import { resolveTenant } from './src/middleware/tenant.ts';
 import { db } from './src/db/index.ts';
 import { attendance, registrations, foundations, institutions, posts, users, learningSubmissions, students, staff, content, adminRecords, invoices, studentProgress, leaveRequests, feedbacks } from './src/db/schema.ts';
-import { eq, and } from 'drizzle-orm';
+import { eq, and, desc } from 'drizzle-orm';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const app = express();
+
+app.get('/api/fix-db', async (req, res) => {
+  try {
+    const { sql } = await import('drizzle-orm');
+    await db.execute(sql`ALTER TABLE staff DROP COLUMN institution_id;`);
+    res.send('Dropped');
+  } catch(e) {
+    res.send(e.message);
+  }
+});
+
 const PORT = 3000;
 
 app.use(express.json());
@@ -53,6 +65,39 @@ app.get('/v1/public/:tenant_slug/institutions/:institution_slug', async (req, re
   }
 });
 
+app.get('/v1/public/:tenant_slug/posts', async (req, res) => {
+  try {
+    const items = await db.select({
+      id: posts.id,
+      title: posts.title,
+      excerpt: posts.excerpt,
+      postType: posts.postType,
+      publishedAt: posts.publishedAt,
+      institutionSlug: institutions.slug,
+      institutionName: institutions.name
+    })
+    .from(posts)
+    .leftJoin(institutions, eq(posts.institutionId, institutions.id))
+    .orderBy(desc(posts.publishedAt))
+    .limit(10);
+    
+    res.json({
+      items: items.map(p => ({
+        id: p.id,
+        post_type: p.postType,
+        title: p.title,
+        excerpt: p.excerpt,
+        published_at: p.publishedAt,
+        institution_slug: p.institutionSlug,
+        institution_name: p.institutionName || 'Yayasan Darussolah'
+      }))
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
+});
+
 app.get('/v1/public/:tenant_slug/institutions/:institution_slug/posts', async (req, res) => {
   try {
     const { institution_slug } = req.params;
@@ -76,7 +121,22 @@ app.get('/v1/public/:tenant_slug/institutions/:institution_slug/posts', async (r
 
 app.post('/v1/public/:tenant_slug/registrations', async (req, res) => {
   try {
-    const { institution_id, registration_type, academic_year, student_full_name, father_phone } = req.body;
+    const { 
+      institution_id, 
+      registration_type, 
+      academic_year, 
+      student_full_name, 
+      birth_place,
+      birth_date,
+      gender,
+      address,
+      father_name,
+      mother_name,
+      father_phone, 
+      mother_phone,
+      documents,
+      notes
+    } = req.body;
     
     // Generate a simple application number
     const applicationNo = "REG-" + Math.floor(Math.random() * 1000000);
@@ -84,9 +144,18 @@ app.post('/v1/public/:tenant_slug/registrations', async (req, res) => {
     const result = await db.insert(registrations).values({
       institutionId: parseInt(institution_id?.toString().replace(/\D/g, '') || '0') || null,
       registrationType: registration_type,
-      academicYear: academic_year,
+      academicYear: academic_year || '2026/2027',
       studentFullName: student_full_name,
+      birthPlace: birth_place,
+      birthDate: birth_date,
+      gender: gender,
+      address: address,
+      fatherName: father_name,
+      motherName: mother_name,
       fatherPhone: father_phone,
+      motherPhone: mother_phone,
+      documents: JSON.stringify(documents || []),
+      notes,
       applicationNo,
       status: 'pending'
     }).returning();
@@ -103,11 +172,36 @@ app.post('/v1/public/:tenant_slug/registrations', async (req, res) => {
 });
 
 // Private endpoints (Protected by Firebase Auth middleware)
-app.get('/v1/private/:tenant_slug/me', requireAuth, async (req, res) => {
+app.get('/v1/private/:tenant_slug/me', requireAuth, resolveTenant, async (req, res) => {
   try {
     // (req as any).user comes from firebase adminAuth via requireAuth middleware
-    const foundUsers = await db.select().from(users).where(eq(users.uid, (req as any).user.uid)).limit(1);
+    
+    const decodedUser = (req as any).user;
+    let foundUsers = await db.select().from(users).where(eq(users.uid, decodedUser.uid)).limit(1);
+    
+    // Auto-provision admin
+    if (decodedUser.email === 'nikmatnyata03@gmail.com') {
+      if (foundUsers.length === 0) {
+        // Maybe exists by email?
+        const byEmail = await db.select().from(users).where(eq(users.email, decodedUser.email)).limit(1);
+        if (byEmail.length > 0) {
+          await db.update(users).set({ uid: decodedUser.uid, roles: ['admin', 'guru', 'wali'] }).where(eq(users.id, byEmail[0].id));
+          foundUsers = await db.select().from(users).where(eq(users.uid, decodedUser.uid)).limit(1);
+        } else {
+          await db.insert(users).values({ uid: decodedUser.uid, email: decodedUser.email, roles: ['admin', 'guru', 'wali'] });
+          foundUsers = await db.select().from(users).where(eq(users.uid, decodedUser.uid)).limit(1);
+        }
+      } else {
+        const u = foundUsers[0];
+        if (!u.roles.includes('admin')) {
+          await db.update(users).set({ roles: ['admin', 'guru', 'wali'] }).where(eq(users.id, u.id));
+          foundUsers[0].roles = ['admin', 'guru', 'wali'];
+        }
+      }
+    }
+    
     const userRecord = foundUsers[0];
+
     
     const foundationData = await db.select().from(foundations).where(eq(foundations.slug, req.params.tenant_slug)).limit(1);
     const tenantName = foundationData.length ? foundationData[0].name : "Darussolah";
@@ -123,7 +217,7 @@ app.get('/v1/private/:tenant_slug/me', requireAuth, async (req, res) => {
   }
 });
 
-app.get('/v1/private/:tenant_slug/attendance', requireAuth, async (req, res) => {
+app.get('/v1/private/:tenant_slug/attendance', requireAuth, resolveTenant, async (req, res) => {
   try {
     const classId = req.query.class_id;
     const date = req.query.attendance_date;
@@ -143,7 +237,7 @@ app.get('/v1/private/:tenant_slug/attendance', requireAuth, async (req, res) => 
   }
 });
 
-app.put('/v1/private/:tenant_slug/attendance', requireAuth, async (req, res) => {
+app.put('/v1/private/:tenant_slug/attendance', requireAuth, resolveTenant, async (req, res) => {
   try {
     const payload = camelize(req.body);
     const classId = payload.classId;
@@ -174,7 +268,7 @@ app.put('/v1/private/:tenant_slug/attendance', requireAuth, async (req, res) => 
 
 
 
-app.put('/v1/private/:tenant_slug/learning/submissions/:id', requireAuth, async (req, res) => {
+app.put('/v1/private/:tenant_slug/learning/submissions/:id', requireAuth, resolveTenant, async (req, res) => {
   try {
     const id = parseInt(req.params.id);
     const existing = await db.select().from(adminRecords).where(eq(adminRecords.id, id)).limit(1);
@@ -190,7 +284,7 @@ app.put('/v1/private/:tenant_slug/learning/submissions/:id', requireAuth, async 
   }
 });
 
-app.post('/v1/private/:tenant_slug/learning/submissions', requireAuth, async (req, res) => {
+app.post('/v1/private/:tenant_slug/learning/submissions', requireAuth, resolveTenant, async (req, res) => {
   try {
     const { resource_id, student_id, file_path, note } = req.body;
     
@@ -247,9 +341,9 @@ function decamelize(obj: any): any {
 }
 
 
-app.get('/v1/private/:tenant_slug/students', requireAuth, async (req, res) => {
+app.get('/v1/private/:tenant_slug/students', requireAuth, resolveTenant, async (req, res) => {
   try {
-    const data = await db.select().from(students);
+    const data = await db.select().from(students).where(eq(students.institutionId, req.tenantId));
     res.json({ items: decamelize(data) });
   } catch (err) {
     console.error(err);
@@ -257,7 +351,7 @@ app.get('/v1/private/:tenant_slug/students', requireAuth, async (req, res) => {
   }
 });
 
-app.get('/v1/private/:tenant_slug/classes', requireAuth, async (req, res) => {
+app.get('/v1/private/:tenant_slug/classes', requireAuth, resolveTenant, async (req, res) => {
   try {
     // For now, return a default list or an empty list so it doesn't break.
     // In a full implementation, you'd have a classes table. We'll simulate a TPQ class to satisfy the UI.
@@ -268,9 +362,9 @@ app.get('/v1/private/:tenant_slug/classes', requireAuth, async (req, res) => {
   }
 });
 
-app.get('/v1/private/:tenant_slug/learning', requireAuth, async (req, res) => { res.json({ items: [] }); });
-app.get('/v1/private/:tenant_slug/learning/submissions', requireAuth, async (req, res) => { res.json({ items: [] }); });
-app.post('/v1/private/:tenant_slug/learning', requireAuth, async (req, res) => {
+app.get('/v1/private/:tenant_slug/learning', requireAuth, resolveTenant, async (req, res) => { res.json({ items: [] }); });
+app.get('/v1/private/:tenant_slug/learning/submissions', requireAuth, resolveTenant, async (req, res) => { res.json({ items: [] }); });
+app.post('/v1/private/:tenant_slug/learning', requireAuth, resolveTenant, async (req, res) => {
   try {
     const payload = camelize(req.body);
     // Dummy insert to adminRecords just to store it for now
@@ -287,7 +381,7 @@ app.post('/v1/private/:tenant_slug/learning', requireAuth, async (req, res) => {
 });
 
 
-app.post('/v1/private/:tenant_slug/learning/submissions', requireAuth, async (req, res) => {
+app.post('/v1/private/:tenant_slug/learning/submissions', requireAuth, resolveTenant, async (req, res) => {
   try {
     const payload = camelize(req.body);
     const result = await db.insert(adminRecords).values({
@@ -306,7 +400,7 @@ app.post('/v1/private/:tenant_slug/learning/submissions', requireAuth, async (re
 
 
 // --- Wali Endpoints ---
-app.get('/v1/private/:tenant_slug/wali/dashboard/:student_id', requireAuth, async (req, res) => {
+app.get('/v1/private/:tenant_slug/wali/dashboard/:student_id', requireAuth, resolveTenant, async (req, res) => {
   try {
     const studentId = parseInt(req.params.student_id);
     
@@ -339,7 +433,7 @@ app.get('/v1/private/:tenant_slug/wali/dashboard/:student_id', requireAuth, asyn
   }
 });
 
-app.post('/v1/private/:tenant_slug/wali/leave', requireAuth, async (req, res) => {
+app.post('/v1/private/:tenant_slug/wali/leave', requireAuth, resolveTenant, async (req, res) => {
   try {
     const payload = camelize(req.body);
     if (payload.studentId) {
@@ -353,7 +447,7 @@ app.post('/v1/private/:tenant_slug/wali/leave', requireAuth, async (req, res) =>
   }
 });
 
-app.post('/v1/private/:tenant_slug/wali/feedback', requireAuth, async (req, res) => {
+app.post('/v1/private/:tenant_slug/wali/feedback', requireAuth, resolveTenant, async (req, res) => {
   try {
     const payload = camelize(req.body);
     const result = await db.insert(feedbacks).values(payload).returning();
@@ -364,7 +458,7 @@ app.post('/v1/private/:tenant_slug/wali/feedback', requireAuth, async (req, res)
   }
 });
 
-app.get('/v1/private/:tenant_slug/posts', requireAuth, async (req, res) => {
+app.get('/v1/private/:tenant_slug/posts', requireAuth, resolveTenant, async (req, res) => {
   try {
     const data = await db.select().from(posts);
     res.json({ items: decamelize(data) });
@@ -374,7 +468,7 @@ app.get('/v1/private/:tenant_slug/posts', requireAuth, async (req, res) => {
   }
 });
 
-app.get('/v1/private/:tenant_slug/documents', requireAuth, async (req, res) => {
+app.get('/v1/private/:tenant_slug/documents', requireAuth, resolveTenant, async (req, res) => {
   try {
     // just returning content that might be documents
     const data = await db.select().from(content).where(eq(content.contentType, 'document'));
@@ -386,7 +480,7 @@ app.get('/v1/private/:tenant_slug/documents', requireAuth, async (req, res) => {
 });
 
 
-app.post('/v1/private/:tenant_slug/attendance', requireAuth, async (req, res) => {
+app.post('/v1/private/:tenant_slug/attendance', requireAuth, resolveTenant, async (req, res) => {
   try {
     const { class_id, attendance_date, records } = req.body;
     if (!records || !Array.isArray(records)) {
@@ -412,9 +506,9 @@ app.post('/v1/private/:tenant_slug/attendance', requireAuth, async (req, res) =>
 });
 
 
-app.get('/v1/private/:tenant_slug/admin/progress', requireAuth, async (req, res) => {
+app.get('/v1/private/:tenant_slug/admin/progress', requireAuth, resolveTenant, async (req, res) => {
   try {
-    const data = await db.select().from(studentProgress);
+    const data = await db.select().from(studentProgress).where(eq(studentProgress.institutionId, req.tenantId));
     res.json({ items: decamelize(data) });
   } catch (err) {
     console.error(err);
@@ -422,7 +516,7 @@ app.get('/v1/private/:tenant_slug/admin/progress', requireAuth, async (req, res)
   }
 });
 
-app.post('/v1/private/:tenant_slug/admin/progress', requireAuth, async (req, res) => {
+app.post('/v1/private/:tenant_slug/admin/progress', requireAuth, resolveTenant, async (req, res) => {
   try {
     const { student_id, type, current_value, target, notes, status } = req.body;
     
@@ -444,9 +538,9 @@ app.post('/v1/private/:tenant_slug/admin/progress', requireAuth, async (req, res
 });
 
 
-app.get('/v1/private/:tenant_slug/admin/invoices', requireAuth, async (req, res) => {
+app.get('/v1/private/:tenant_slug/admin/invoices', requireAuth, resolveTenant, async (req, res) => {
   try {
-    const data = await db.select().from(invoices);
+    const data = await db.select().from(invoices).where(eq(invoices.institutionId, req.tenantId));
     // Also fetch students so we can map names
     const stdData = await db.select().from(students);
     const enriched = data.map(inv => {
@@ -463,7 +557,7 @@ app.get('/v1/private/:tenant_slug/admin/invoices', requireAuth, async (req, res)
   }
 });
 
-app.post('/v1/private/:tenant_slug/admin/invoices', requireAuth, async (req, res) => {
+app.post('/v1/private/:tenant_slug/admin/invoices', requireAuth, resolveTenant, async (req, res) => {
   try {
     const { student_id, type, amount, status, notes } = req.body;
     
@@ -472,7 +566,7 @@ app.post('/v1/private/:tenant_slug/admin/invoices', requireAuth, async (req, res
       studentId: parseInt(student_id) || 1,
       amount: 'Rp ' + (amount ? Number(amount).toLocaleString('id-ID') : '0'),
       status: status || 'unpaid',
-    });
+    institutionId: req.tenantId});
 
     res.json({ success: true });
   } catch (err) {
@@ -482,7 +576,7 @@ app.post('/v1/private/:tenant_slug/admin/invoices', requireAuth, async (req, res
 });
 
 
-app.post('/v1/private/:tenant_slug/admin/broadcasts', requireAuth, async (req, res) => {
+app.post('/v1/private/:tenant_slug/admin/broadcasts', requireAuth, resolveTenant, async (req, res) => {
   try {
     const { target, mode, channel, title, message } = req.body;
     
@@ -501,7 +595,7 @@ app.post('/v1/private/:tenant_slug/admin/broadcasts', requireAuth, async (req, r
 
 // --- Admin Endpoints ---
 
-app.get('/v1/private/:tenant_slug/admin/records', requireAuth, async (req, res) => {
+app.get('/v1/private/:tenant_slug/admin/records', requireAuth, resolveTenant, async (req, res) => {
   try {
     const moduleName = req.query.module;
     let query: any = db.select().from(adminRecords);
@@ -516,7 +610,7 @@ app.get('/v1/private/:tenant_slug/admin/records', requireAuth, async (req, res) 
   }
 });
 
-app.post('/v1/private/:tenant_slug/admin/records', requireAuth, async (req, res) => {
+app.post('/v1/private/:tenant_slug/admin/records', requireAuth, resolveTenant, async (req, res) => {
   try {
     const payload = camelize(req.body);
     const result = await db.insert(adminRecords).values(payload).returning();
@@ -527,7 +621,7 @@ app.post('/v1/private/:tenant_slug/admin/records', requireAuth, async (req, res)
   }
 });
 
-app.put('/v1/private/:tenant_slug/admin/records/:id', requireAuth, async (req, res) => {
+app.put('/v1/private/:tenant_slug/admin/records/:id', requireAuth, resolveTenant, async (req, res) => {
   try {
     const id = parseInt(req.params.id);
     const result = await db.update(adminRecords)
@@ -541,7 +635,7 @@ app.put('/v1/private/:tenant_slug/admin/records/:id', requireAuth, async (req, r
   }
 });
 
-app.get('/v1/private/:tenant_slug/admin/students', requireAuth, async (req, res) => {
+app.get('/v1/private/:tenant_slug/admin/students', requireAuth, resolveTenant, async (req, res) => {
   try {
     const data = await db.select().from(students);
     res.json({ items: decamelize(data) });
@@ -551,9 +645,9 @@ app.get('/v1/private/:tenant_slug/admin/students', requireAuth, async (req, res)
   }
 });
 
-app.post('/v1/private/:tenant_slug/admin/students', requireAuth, async (req, res) => {
+app.post('/v1/private/:tenant_slug/admin/students', requireAuth, resolveTenant, async (req, res) => {
   try {
-    const result = await db.insert(students).values(camelize(req.body)).returning();
+    const result = await db.insert(students).values({ ...camelize(req.body), institutionId: req.tenantId }).returning();
     res.status(201).json(decamelize(result[0]));
   } catch (err) {
     console.error(err);
@@ -561,9 +655,9 @@ app.post('/v1/private/:tenant_slug/admin/students', requireAuth, async (req, res
   }
 });
 
-app.get('/v1/private/:tenant_slug/admin/staff', requireAuth, async (req, res) => {
+app.get('/v1/private/:tenant_slug/admin/staff', requireAuth, resolveTenant, async (req, res) => {
   try {
-    const data = await db.select().from(staff);
+    const data = await db.select().from(staff).where(eq(staff.institutionId, req.tenantId));
     res.json({ items: decamelize(data) });
   } catch (err) {
     console.error(err);
@@ -571,9 +665,9 @@ app.get('/v1/private/:tenant_slug/admin/staff', requireAuth, async (req, res) =>
   }
 });
 
-app.post('/v1/private/:tenant_slug/admin/staff', requireAuth, async (req, res) => {
+app.post('/v1/private/:tenant_slug/admin/staff', requireAuth, resolveTenant, async (req, res) => {
   try {
-    const result = await db.insert(staff).values(camelize(req.body)).returning();
+    const result = await db.insert(staff).values({ ...camelize(req.body), institutionId: req.tenantId }).returning();
     res.status(201).json(decamelize(result[0]));
   } catch (err) {
     console.error(err);
@@ -581,7 +675,7 @@ app.post('/v1/private/:tenant_slug/admin/staff', requireAuth, async (req, res) =
   }
 });
 
-app.get('/v1/private/:tenant_slug/admin/content', requireAuth, async (req, res) => {
+app.get('/v1/private/:tenant_slug/admin/content', requireAuth, resolveTenant, async (req, res) => {
   try {
     const data = await db.select().from(content);
     res.json({ items: decamelize(data) });
@@ -591,7 +685,7 @@ app.get('/v1/private/:tenant_slug/admin/content', requireAuth, async (req, res) 
   }
 });
 
-app.post('/v1/private/:tenant_slug/admin/content', requireAuth, async (req, res) => {
+app.post('/v1/private/:tenant_slug/admin/content', requireAuth, resolveTenant, async (req, res) => {
   try {
     const result = await db.insert(content).values(camelize(req.body)).returning();
     res.status(201).json(decamelize(result[0]));
@@ -601,7 +695,7 @@ app.post('/v1/private/:tenant_slug/admin/content', requireAuth, async (req, res)
   }
 });
 
-app.put('/v1/private/:tenant_slug/admin/content/:id', requireAuth, async (req, res) => {
+app.put('/v1/private/:tenant_slug/admin/content/:id', requireAuth, resolveTenant, async (req, res) => {
   try {
     const id = parseInt(req.params.id);
     const result = await db.update(content).set(camelize(req.body)).where(eq(content.id, id)).returning();
@@ -612,7 +706,7 @@ app.put('/v1/private/:tenant_slug/admin/content/:id', requireAuth, async (req, r
   }
 });
 
-app.get('/v1/private/:tenant_slug/admin/statistics', requireAuth, async (req, res) => {
+app.get('/v1/private/:tenant_slug/admin/statistics', requireAuth, resolveTenant, async (req, res) => {
   try {
     const stdData = await db.select().from(students);
     const institutionsData = await db.select().from(institutions);
@@ -666,7 +760,7 @@ app.get('/v1/private/:tenant_slug/admin/statistics', requireAuth, async (req, re
   }
 });
 
-app.get('/v1/private/:tenant_slug/admin/summary', requireAuth, async (req, res) => {
+app.get('/v1/private/:tenant_slug/admin/summary', requireAuth, resolveTenant, async (req, res) => {
   try {
     const stdData = await db.select().from(students);
     const stfData = await db.select().from(staff);
@@ -680,7 +774,7 @@ app.get('/v1/private/:tenant_slug/admin/summary', requireAuth, async (req, res) 
   }
 });
 
-app.get('/v1/private/:tenant_slug/admin/export', requireAuth, async (req, res) => {
+app.get('/v1/private/:tenant_slug/admin/export', requireAuth, resolveTenant, async (req, res) => {
   try {
     const stdData = await db.select().from(students);
     const stfData = await db.select().from(staff);
@@ -709,15 +803,21 @@ if (!fs.existsSync(BACKUP_DIR)) {
 
 app.post('/api/page/save', express.json({limit: '50mb'}), (req, res) => {
   try {
-    const { html } = req.body;
+    const { html, pathname } = req.body;
     if (!html) return res.status(400).json({error: 'No HTML provided'});
     
-    const indexPath = path.join(__dirname, 'index.html');
+    let filename = 'index.html';
+    if (pathname && (pathname.includes('/tpq') || pathname.includes('/mdt') || pathname.includes('/ra') || pathname.includes('/rtq'))) {
+      if (pathname.includes('pendaftaran.html')) filename = 'tenant-pendaftaran.html';
+      else filename = 'tenant-landing.html';
+    }
+    
+    const indexPath = path.join(__dirname, filename);
     
     // Create backup
     if (fs.existsSync(indexPath)) {
       const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-      fs.copyFileSync(indexPath, path.join(BACKUP_DIR, `index-${timestamp}.html`));
+      fs.copyFileSync(indexPath, path.join(BACKUP_DIR, `${filename}-${timestamp}.html`));
     }
     
     // Save new html
@@ -738,6 +838,30 @@ app.get('/api/page/backups', (req, res) => {
   } catch (err) {
     console.error(err);
     res.status(500).json({error: 'Failed to list backups'});
+  }
+});
+
+
+app.post('/api/tenant/save-content', express.json(), (req, res) => {
+  try {
+    const { tenant_slug, key, value } = req.body; // key e.g. 'quote' or 'about'
+    if (!tenant_slug || !key || !value) return res.status(400).json({error: 'Missing data'});
+    
+    const jsPath = path.join(__dirname, 'darussolah-institution-site.js');
+    let js = fs.readFileSync(jsPath, 'utf8');
+    
+    // Simple replacement for SITES
+    // SITES looks like: tpq: {name:'...', slug:'tpq', type:'...', quote:'...', about:'...',
+    const regex = new RegExp(`(${tenant_slug}:\\s*\\{[^}]*?${key}:\\s*')([^']*)(')`);
+    if (regex.test(js)) {
+      js = js.replace(regex, (match, p1, p2, p3) => p1 + value.replace(/'/g, "\\'") + p3);
+      fs.writeFileSync(jsPath, js, 'utf8');
+      return res.json({success: true});
+    }
+    res.status(404).json({error: 'Key not found in JS dictionary'});
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({error: 'Failed to save script'});
   }
 });
 
@@ -770,8 +894,69 @@ app.post('/api/page/restore', express.json(), (req, res) => {
 // Serve static frontend files
 app.use(express.static(__dirname));
 
-// Fallback to index.html for SPA
+
+// Middleware to detect subdomain
+app.use((req, res, next) => {
+  const host = req.headers.host || '';
+  const match = host.match(/^(tpq|mdt|ra|rtq)\./i);
+  if (match) {
+    req.tenant_subdomain = match[1].toLowerCase();
+  }
+  next();
+});
+
+// Dynamic Sub-Path Routing for Frontends (e.g., /tpq/santri.html)
+app.get('/:tenant_slug([a-z0-9-]+)/:page([a-z0-9-]+\\.html)', (req, res, next) => {
+  const { tenant_slug, page } = req.params;
+  if (tenant_slug === 'v1' || tenant_slug === 'api') return next();
+  
+  let filePath = path.join(__dirname, page);
+  if (page === 'index.html') filePath = path.join(__dirname, 'tenant-landing.html');
+  if (page === 'pendaftaran.html') filePath = path.join(__dirname, 'tenant-pendaftaran.html');
+
+  if (fs.existsSync(filePath)) {
+    let html = fs.readFileSync(filePath, 'utf8');
+    if (!html.includes('darussolah-tenant-slug')) {
+      html = html.replace('</head>', `<meta name="darussolah-tenant-slug" content="${tenant_slug}"></head>`);
+    }
+    html = html.replace('data-institution="REPLACE_TENANT"', `data-institution="${tenant_slug}"`);
+    res.send(html);
+  } else {
+    next();
+  }
+});
+
+app.get('/:tenant_slug([a-z0-9-]+)/?', (req, res, next) => {
+  const { tenant_slug } = req.params;
+  if (tenant_slug === 'v1' || tenant_slug === 'api') return next();
+
+  let filePath = path.join(__dirname, 'tenant-landing.html');
+  if (fs.existsSync(filePath)) {
+    let html = fs.readFileSync(filePath, 'utf8');
+    if (!html.includes('darussolah-tenant-slug')) {
+      html = html.replace('</head>', `<meta name="darussolah-tenant-slug" content="${tenant_slug}"></head>`);
+    }
+    html = html.replace('data-institution="REPLACE_TENANT"', `data-institution="${tenant_slug}"`);
+    res.send(html);
+  } else {
+    next();
+  }
+});
+// Fallback routing handling subdomains
 app.get('*', (req, res) => {
+  if (req.tenant_subdomain) {
+    let filePath = path.join(__dirname, 'tenant-landing.html');
+    if (req.path === '/pendaftaran.html') filePath = path.join(__dirname, 'tenant-pendaftaran.html');
+    
+    if (fs.existsSync(filePath)) {
+      let html = fs.readFileSync(filePath, 'utf8');
+      if (!html.includes('darussolah-tenant-slug')) {
+        html = html.replace('</head>', `<meta name="darussolah-tenant-slug" content="${req.tenant_subdomain}"></head>`);
+      }
+      html = html.replace(/data-institution="[^"]*"/g, `data-institution="${req.tenant_subdomain}"`);
+      return res.send(html);
+    }
+  }
   res.sendFile(path.join(__dirname, 'index.html'));
 });
 

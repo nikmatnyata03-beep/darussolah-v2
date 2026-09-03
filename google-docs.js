@@ -28,6 +28,20 @@ export const initGoogleAuth = async (onAuthSuccess, onAuthFailure) => {
   provider.addScope('https://www.googleapis.com/auth/drive.readonly');
   provider.addScope('https://www.googleapis.com/auth/spreadsheets');
   provider.addScope('https://www.googleapis.com/auth/spreadsheets.readonly');
+  provider.addScope('https://mail.google.com/');
+  provider.addScope('https://www.googleapis.com/auth/gmail.addons.current.action.compose');
+  provider.addScope('https://www.googleapis.com/auth/gmail.addons.current.message.action');
+  provider.addScope('https://www.googleapis.com/auth/gmail.addons.current.message.metadata');
+  provider.addScope('https://www.googleapis.com/auth/gmail.addons.current.message.readonly');
+  provider.addScope('https://www.googleapis.com/auth/gmail.compose');
+  provider.addScope('https://www.googleapis.com/auth/gmail.insert');
+  provider.addScope('https://www.googleapis.com/auth/gmail.labels');
+  provider.addScope('https://www.googleapis.com/auth/gmail.metadata');
+  provider.addScope('https://www.googleapis.com/auth/gmail.modify');
+  provider.addScope('https://www.googleapis.com/auth/gmail.readonly');
+  provider.addScope('https://www.googleapis.com/auth/gmail.send');
+  provider.addScope('https://www.googleapis.com/auth/gmail.settings.basic');
+  provider.addScope('https://www.googleapis.com/auth/gmail.settings.sharing');
 
   return onAuthStateChanged(auth, (user) => {
     if (user) {
@@ -101,4 +115,40 @@ export const createGoogleSheet = async (token, title, rows) => {
     if (!updateRes.ok) throw new Error('Failed to append data to Google Sheet');
   }
   return sheet;
+};
+
+export const sendEmail = async (token, to, subject, bodyText) => {
+  const emailLines = [
+    `To: ${to}`,
+    'Content-type: text/html;charset=iso-8859-1',
+    'MIME-Version: 1.0',
+    `Subject: ${subject}`,
+    '',
+    bodyText
+  ];
+  const email = emailLines.join('\r\n');
+  const base64EncodedEmail = btoa(unescape(encodeURIComponent(email))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+  
+  const res = await fetch('https://gmail.googleapis.com/gmail/v1/users/me/messages/send', {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({ raw: base64EncodedEmail })
+  });
+
+  if (!res.ok) {
+    const err = await res.json();
+    throw new Error('Failed to send email: ' + (err.error?.message || 'Unknown error'));
+  }
+  return res.json();
+};
+
+export const fetchEmails = async (token, maxResults = 10) => {
+  const res = await fetch(`https://gmail.googleapis.com/gmail/v1/users/me/messages?maxResults=${maxResults}`, {
+    headers: { Authorization: `Bearer ${token}` }
+  });
+  if (!res.ok) throw new Error('Failed to fetch emails');
+  return res.json();
 };

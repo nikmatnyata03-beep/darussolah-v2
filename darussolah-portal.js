@@ -7,7 +7,30 @@
     supabaseUrl: String(source.supabaseUrl || metaValue('darussolah-supabase-url')).replace(/\/+$/, ''),
     supabaseAnonKey: String(source.supabaseAnonKey || metaValue('darussolah-supabase-anon-key')),
     storageBucket: String(source.storageBucket || 'learning-submissions'),
-    tenantSlug: String(source.tenantSlug || 'yayasan-darussolah-wal-jinan')
+    tenantSlug: (() => {
+      
+      let slug = metaValue('darussolah-tenant-slug');
+      if (!slug && source.tenantSlug !== 'darussolah' && source.tenantSlug !== 'yayasan-darussolah-wal-jinan') {
+        slug = source.tenantSlug;
+      }
+
+      const hostParts = window.location.hostname.split('.');
+      if (hostParts.length > 0) {
+        const sub = hostParts[0].toLowerCase();
+        if (['tpq', 'mdt', 'ra', 'rtq'].includes(sub)) {
+          slug = sub;
+        }
+      }
+      
+      if (!slug) {
+        const pathParts = window.location.pathname.split('/');
+        if (pathParts.length > 1 && ['tpq', 'mdt', 'ra', 'rtq'].includes(pathParts[1])) {
+          slug = pathParts[1];
+        }
+      }
+      return String(slug || 'tpq');
+
+    })()
   });
   const role = document.body?.dataset.portalRole || '';
   const allConfigured = Boolean(config.apiBase);

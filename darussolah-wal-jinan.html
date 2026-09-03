@@ -373,7 +373,7 @@
     <div class="container nav">
       <a class="brand" href="#beranda" aria-label="Darussolah Wal Jinan, kembali ke beranda">
         <span class="brand-seal">
-          <img src="darussolah-logo-yayasan.jpeg" alt="" onerror="this.hidden=true;this.nextElementSibling.hidden=false;this.nextElementSibling.style.display='grid'">
+          <img src="/darussolah-logo-yayasan.jpeg" alt="" onerror="this.hidden=true;this.nextElementSibling.hidden=false;this.nextElementSibling.style.display='grid'">
           <span class="seal-fallback" hidden>DWJ</span>
         </span>
         <span class="brand-copy">Darussolah Wal Jinan<small>Yayasan pendidikan dan dakwah</small></span>
@@ -594,7 +594,7 @@
     let lastFocused = null;
     const query = new URLSearchParams(window.location.search);
     const apiBase = String(window.DARUSSOLAH_CONFIG?.apiBase || window.DARUSSOLAH_API_BASE || document.querySelector('meta[name="darussolah-api-base"]')?.content || '').replace(/\/+$/, '');
-    const tenantSlug = 'yayasan-darussolah-wal-jinan';
+    const tenantSlug = 'darussolah';
     const unitSelect = document.querySelector('#unit');
     let apiReady = false;
 

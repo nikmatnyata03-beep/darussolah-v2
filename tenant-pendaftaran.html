@@ -1,0 +1,438 @@
+<!doctype html>
+<html lang="id">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Formulir Pendaftaran | Darussolah Wal Jinan</title>
+  <link rel="stylesheet" href="/darussolah-institution-site.css">
+  <style>
+    .registration-form-wrap {
+      max-width: 800px;
+      margin: 40px auto;
+      background: #fff;
+      padding: 40px;
+      border-radius: 12px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.05);
+    }
+    .form-header {
+      text-align: center;
+      border-bottom: 2px solid #2d6a4f;
+      padding-bottom: 20px;
+      margin-bottom: 30px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 20px;
+    }
+    .form-header img {
+      width: 70px;
+      height: 70px;
+      border-radius: 50%;
+      object-fit: cover;
+    }
+    .form-header-text h1 {
+      font-size: 24px;
+      margin: 0 0 5px 0;
+      color: #1b4332;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .form-header-text p {
+      margin: 0;
+      font-size: 13px;
+      color: #555;
+    }
+    .form-title {
+      text-align: center;
+      margin-bottom: 30px;
+    }
+    .form-title h2 {
+      font-size: 18px;
+      margin: 0 0 5px 0;
+      text-transform: uppercase;
+    }
+    .form-title p {
+      margin: 0;
+      font-size: 14px;
+      color: #666;
+    }
+    
+    .form-section {
+      margin-bottom: 30px;
+    }
+    .form-section-title {
+      font-weight: 700;
+      font-size: 15px;
+      margin-bottom: 15px;
+      text-transform: uppercase;
+      color: #1b4332;
+      border-bottom: 1px solid #e2e8f0;
+      padding-bottom: 5px;
+    }
+    
+    .form-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 15px;
+    }
+    .form-field {
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+    }
+    .form-field.full {
+      grid-column: 1 / -1;
+    }
+    .form-field label {
+      font-size: 13px;
+      font-weight: 600;
+      color: #444;
+    }
+    .form-field input, .form-field select, .form-field textarea {
+      padding: 10px 12px;
+      border: 1px solid #cbd5e1;
+      border-radius: 6px;
+      font-family: inherit;
+      font-size: 14px;
+      background: #f8fafc;
+      transition: all 0.2s;
+    }
+    .form-field input:focus, .form-field select:focus, .form-field textarea:focus {
+      outline: none;
+      border-color: #2d6a4f;
+      background: #fff;
+      box-shadow: 0 0 0 3px rgba(45, 106, 79, 0.1);
+    }
+    .form-field input[readonly] {
+      background: #e2e8f0;
+      cursor: not-allowed;
+      color: #333;
+      font-weight: 600;
+    }
+    
+    .radio-group {
+      display: flex;
+      gap: 20px;
+      align-items: center;
+      padding: 10px 12px;
+      border: 1px solid #cbd5e1;
+      border-radius: 6px;
+      background: #f8fafc;
+    }
+    .radio-label {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-weight: 500;
+      cursor: pointer;
+      font-size: 14px;
+    }
+    
+    .checkbox-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      background: #f8fafc;
+      padding: 15px;
+      border-radius: 6px;
+      border: 1px solid #cbd5e1;
+    }
+    .checkbox-label {
+      display: flex;
+      align-items: flex-start;
+      gap: 8px;
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      color: #444;
+    }
+    .checkbox-label input {
+      margin-top: 2px;
+    }
+    
+    .submit-btn {
+      width: 100%;
+      padding: 14px;
+      background: #1b4332;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.2s;
+      margin-top: 10px;
+    }
+    .submit-btn:hover {
+      background: #2d6a4f;
+    }
+    .submit-btn:disabled {
+      background: #94a3b8;
+      cursor: not-allowed;
+    }
+    
+    .success-message {
+      display: none;
+      text-align: center;
+      padding: 40px 20px;
+    }
+    .success-message h2 {
+      color: #2d6a4f;
+      margin-bottom: 10px;
+    }
+    .success-message .application-no {
+      font-size: 24px;
+      font-weight: 700;
+      background: #f1f5f9;
+      padding: 10px 20px;
+      border-radius: 8px;
+      display: inline-block;
+      margin: 15px 0;
+      letter-spacing: 1px;
+    }
+    
+    @media (max-width: 600px) {
+      .form-grid, .checkbox-grid {
+        grid-template-columns: 1fr;
+      }
+      .registration-form-wrap {
+        padding: 20px;
+        margin: 20px 15px;
+      }
+      .form-header {
+        flex-direction: column;
+        text-align: center;
+      }
+    }
+  </style>
+</head>
+<body data-institution="REPLACE_TENANT">
+  <header class="top">
+    <div class="wrap nav">
+      <a class="brand" href="/">
+        <img data-logo src="" alt="Logo">
+        <span data-name>Lembaga<small>Darussolah Wal Jinan</small></span>
+      </a>
+      <a class="pill" href="./">Kembali ke Beranda</a>
+    </div>
+  </header>
+  
+  <main>
+    <div class="registration-form-wrap">
+      
+      <div id="form-container">
+        <div class="form-header">
+          <img data-logo src="" alt="Logo Yayasan">
+          <div class="form-header-text">
+            <h1>YAYASAN DARUSSOLAH WAL JINAN</h1>
+            <p>Jl. Rawabadak 1 No.79-81 RT.03 RW.05 Kelurahan Lagoa Kecamatan Koja<br>Kota Administrasi Jakarta Utara 14270 | Telp. 0822-9840-6892</p>
+          </div>
+        </div>
+        
+        <div class="form-title">
+          <h2>FORMULIR PENDAFTARAN & DAFTAR ULANG SANTRI</h2>
+          <p>Tahun Ajaran 2026/2027</p>
+        </div>
+        
+        <form id="pendaftaran-form">
+          <div class="form-section">
+            <div class="form-section-title">I. JENIS PENDAFTARAN</div>
+            <div class="radio-group">
+              <label class="radio-label">
+                <input type="radio" name="registration_type" value="Santri Baru" required checked> Santri Baru
+              </label>
+              <label class="radio-label">
+                <input type="radio" name="registration_type" value="Daftar Ulang"> Daftar Ulang (Santri Lama)
+              </label>
+            </div>
+          </div>
+          
+          <div class="form-section">
+            <div class="form-section-title">II. PROGRAM PENDIDIKAN</div>
+            <div class="form-field">
+              <input type="text" id="program-pendidikan" name="institution_name" readonly value="Memuat..." class="skeleton-block" style="height:40px; border:none; padding:10px 12px;">
+            </div>
+          </div>
+          
+          <div class="form-section">
+            <div class="form-section-title">III. DATA DIRI SANTRI</div>
+            <div class="form-grid">
+              <div class="form-field full">
+                <label>Nama Lengkap</label>
+                <input type="text" name="student_full_name" required placeholder="Nama lengkap santri sesuai akta/KK">
+              </div>
+              <div class="form-field">
+                <label>Tempat Lahir</label>
+                <input type="text" name="birth_place" required placeholder="Contoh: Jakarta">
+              </div>
+              <div class="form-field">
+                <label>Tanggal Lahir</label>
+                <input type="date" name="birth_date" required>
+              </div>
+              <div class="form-field full">
+                <label>Jenis Kelamin</label>
+                <div class="radio-group" style="padding: 10px 12px; background: #fff; border: 1px solid #cbd5e1;">
+                  <label class="radio-label">
+                    <input type="radio" name="gender" value="Laki-laki" required> Laki-laki
+                  </label>
+                  <label class="radio-label">
+                    <input type="radio" name="gender" value="Perempuan"> Perempuan
+                  </label>
+                </div>
+              </div>
+              <div class="form-field full">
+                <label>Alamat Lengkap</label>
+                <textarea name="address" rows="3" required placeholder="Jalan, RT/RW, Kelurahan, Kecamatan"></textarea>
+              </div>
+            </div>
+          </div>
+          
+          <div class="form-section">
+            <div class="form-section-title">IV. DATA ORANG TUA/WALI</div>
+            <div class="form-grid">
+              <div class="form-field">
+                <label>Nama Ayah</label>
+                <input type="text" name="father_name" required placeholder="Nama lengkap ayah">
+              </div>
+              <div class="form-field">
+                <label>No. HP Ayah</label>
+                <input type="tel" name="father_phone" required placeholder="08xxxxxxxxxx">
+              </div>
+              <div class="form-field">
+                <label>Nama Ibu</label>
+                <input type="text" name="mother_name" required placeholder="Nama lengkap ibu">
+              </div>
+              <div class="form-field">
+                <label>No. HP Ibu</label>
+                <input type="tel" name="mother_phone" placeholder="08xxxxxxxxxx (Opsional)">
+              </div>
+            </div>
+          </div>
+          
+          <div class="form-section">
+            <div class="form-section-title">V. KESIAPAN BERKAS PERSYARATAN</div>
+            <p style="font-size: 13px; color: #666; margin-top: 0; margin-bottom: 12px;">Saya bersedia melampirkan salinan (fotokopi) berkas berikut ke petugas pendaftaran:</p>
+            <div class="checkbox-grid">
+              <label class="checkbox-label">
+                <input type="checkbox" name="documents" value="FC KARTU KELUARGA"> FC KARTU KELUARGA
+              </label>
+              <label class="checkbox-label">
+                <input type="checkbox" name="documents" value="PAS FOTO 3X4 (2 LMBR)"> PAS FOTO 3X4 (2 LMBR)
+              </label>
+              <label class="checkbox-label">
+                <input type="checkbox" name="documents" value="FC KTP WALI"> FC KTP WALI
+              </label>
+              <label class="checkbox-label">
+                <input type="checkbox" name="documents" value="FC KIA"> FC KIA
+              </label>
+              <label class="checkbox-label">
+                <input type="checkbox" name="documents" value="FC NISN (APABILA ADA)"> FC NISN (APABILA ADA)
+              </label>
+              <label class="checkbox-label">
+                <input type="checkbox" name="documents" value="FC IJAZAH SEBELUMNYA"> FC IJAZAH SEBELUMNYA (MDTW)
+              </label>
+            </div>
+          </div>
+          
+          <button type="submit" class="submit-btn" id="submit-btn">Kirim Formulir Pendaftaran</button>
+        </form>
+      </div>
+      
+      <div id="success-container" class="success-message">
+        <svg style="width: 80px; height: 80px; color: #2d6a4f; margin-bottom: 20px;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+        <h2>Alhamdulillah, Pendaftaran Diterima</h2>
+        <p>Terima kasih telah mengisi formulir pendaftaran. Simpan nomor registrasi Anda di bawah ini:</p>
+        <div class="application-no" id="app-no-display">REG-XXXXXX</div>
+        <p style="color: #555; margin-bottom: 30px;">Silakan persiapkan berkas persyaratan fisik untuk diserahkan ke sekretariat lembaga kami atau tunggu konfirmasi selanjutnya dari tim pendaftaran.</p>
+        <a href="./" class="submit-btn" style="display: inline-block; text-decoration: none; max-width: 300px; padding: 12px;">Selesai & Kembali</a>
+      </div>
+      
+    </div>
+  </main>
+  
+  <footer>
+    <div class="wrap footer-row">
+      <div>
+        <div class="footer-name" data-name>Lembaga</div>
+        <p>Microsite lembaga dalam ekosistem Yayasan Darussolah Wal Jinan.</p>
+      </div>
+      <div class="footer-note">&copy; <span data-year></span> Darussolah Wal Jinan</div>
+    </div>
+  </footer>
+  
+  <div class="toast" id="toast"></div>
+  <script src="/darussolah-config.js"></script>
+  <script src="/darussolah-institution-site.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      // Ensure the correct institution name is loaded into the readonly field
+      const waitInterval = setInterval(() => {
+        const instName = document.querySelector('[data-name]').textContent;
+        if (instName && instName !== 'Lembaga') {
+          const el = document.getElementById('program-pendidikan'); el.value = instName; el.classList.remove('skeleton-block'); el.style.height = ''; el.style.border = ''; el.style.padding = '';
+          clearInterval(waitInterval);
+        }
+      }, 100);
+
+      const form = document.getElementById('pendaftaran-form');
+      const submitBtn = document.getElementById('submit-btn');
+      
+      form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        
+        let tenantSlug = document.documentElement.dataset.tenant || document.querySelector('meta[name="darussolah-tenant-slug"]')?.content || document.body.dataset.institution;
+        const hostParts = window.location.hostname.split('.');
+        if (hostParts.length > 0) {
+          const sub = hostParts[0].toLowerCase();
+          if (['tpq', 'mdt', 'ra', 'rtq'].includes(sub)) {
+            tenantSlug = sub;
+          }
+        }
+        if (!tenantSlug) {
+          toast('Terjadi kesalahan, kode lembaga tidak ditemukan.');
+          return;
+        }
+
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'Mengirim...';
+        
+        try {
+          const formData = new FormData(form);
+          const payload = Object.fromEntries(formData.entries());
+          
+          // Handle checkboxes (multiple values)
+          payload.documents = formData.getAll('documents');
+          
+          // Fetch the institution ID from the API
+          const instRes = await fetch(`${window.DARUSSOLAH_CONFIG?.apiBase || ''}/v1/public/${TENANT}/institutions/${tenantSlug}`);
+          if (instRes.ok) {
+            const instData = await instRes.json();
+            payload.institution_id = instData.id;
+          }
+          
+          const response = await fetch(`${window.DARUSSOLAH_CONFIG?.apiBase || ''}/v1/public/${tenantSlug}/registrations`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+          });
+          
+          if (!response.ok) throw new Error('API Error');
+          
+          const result = await response.json();
+          
+          document.getElementById('form-container').style.display = 'none';
+          document.getElementById('success-container').style.display = 'block';
+          document.getElementById('app-no-display').textContent = result.application_no;
+          window.scrollTo(0, 0);
+          
+        } catch (error) {
+          console.error(error);
+          toast('Gagal mengirim pendaftaran. Periksa koneksi Anda.');
+          submitBtn.disabled = false;
+          submitBtn.textContent = 'Kirim Formulir Pendaftaran';
+        }
+      });
+    });
+  </script>
+</body>
+</html>
