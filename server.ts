@@ -4,6 +4,8 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import { requireAuth } from './src/middleware/auth.ts';
 import { resolveTenant } from './src/middleware/tenant.ts';
+import { errorHandler, notFoundHandler, asyncHandler, ValidationError } from './src/middleware/error-handler.ts';
+import { sanitizeString, validateRequiredFields, isValidEmail, isValidPhone, isValidDate, isValidIntegerId } from './src/lib/validation.ts';
 import { db } from './src/db/index.ts';
 import { attendance, registrations, foundations, institutions, posts, users, learningSubmissions, students, staff, content, adminRecords, invoices, studentProgress, leaveRequests, feedbacks } from './src/db/schema.ts';
 import { eq, and, desc } from 'drizzle-orm';
@@ -11,165 +13,182 @@ import { eq, and, desc } from 'drizzle-orm';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+const PORT = process.env.PORT || 3000;
+
 const app = express();
-
-app.get('/api/fix-db', async (req, res) => {
-  try {
-    const { sql } = await import('drizzle-orm');
-    await db.execute(sql`ALTER TABLE staff DROP COLUMN institution_id;`);
-    res.send('Dropped');
-  } catch(e) {
-    res.send(e.message);
-  }
-});
-
-const PORT = 3000;
-
 app.use(express.json());
 
+// Apply global error handler AFTER all routes
+app.use(errorHandler);
+
 // Public endpoints
-app.get('/v1/public/:tenant_slug/foundation', async (req, res) => {
-  try {
-    const data = await db.select().from(foundations).where(eq(foundations.slug, req.params.tenant_slug)).limit(1);
-    if (!data.length) return res.status(404).json({ error: 'Foundation not found' });
-    const row = data[0];
-    res.json({ id: row.id, name: row.name, description: row.description, logo_url: row.logoUrl });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: 'Internal Server Error' });
+app.get('/v1/public/:tenant_slug/foundation', asyncHandler(async (req, res) => {
+  const tenantSlug = sanitizeString(req.params.tenant_slug);
+  if (!tenantSlug) {
+    throw new ValidationError('Tenant slug is required');
   }
-});
-
-app.get('/v1/public/:tenant_slug/institutions', async (req, res) => {
-  try {
-    const data = await db.select().from(institutions);
-    res.json({
-      items: data.map(row => ({ id: row.id, slug: row.slug, name: row.name, logo_url: row.logoUrl, description: row.description }))
-    });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: 'Internal Server Error' });
+  
+  const data = await db.select().from(foundations).where(eq(foundations.slug, tenantSlug)).limit(1);
+  if (!data.length) {
+    throw new ValidationError('Foundation not found', 'tenant_slug');
   }
-});
+  const row = data[0];
+  res.json({ id: row.id, name: row.name, description: row.description, logo_url: row.logoUrl });
+}));
 
-app.get('/v1/public/:tenant_slug/institutions/:institution_slug', async (req, res) => {
-  try {
-    const { institution_slug } = req.params;
-    const data = await db.select().from(institutions).where(eq(institutions.slug, institution_slug)).limit(1);
-    if (!data.length) return res.status(404).json({ error: 'Institution not found' });
-    const row = data[0];
-    res.json({ id: row.id, slug: row.slug, name: row.name, description: row.description, logo_url: row.logoUrl });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: 'Internal Server Error' });
+app.get('/v1/public/:tenant_slug/institutions', asyncHandler(async (req, res) => {
+  const tenantSlug = sanitizeString(req.params.tenant_slug);
+  if (!tenantSlug) {
+    throw new ValidationError('Tenant slug is required');
   }
-});
+  
+  const data = await db.select().from(institutions).where(eq(institutions.slug, tenantSlug));
+  res.json({
+    items: data.map(row => ({ id: row.id, slug: row.slug, name: row.name, logo_url: row.logoUrl, description: row.description }))
+  });
+}));
 
-app.get('/v1/public/:tenant_slug/posts', async (req, res) => {
-  try {
-    const items = await db.select({
-      id: posts.id,
-      title: posts.title,
-      excerpt: posts.excerpt,
-      postType: posts.postType,
-      publishedAt: posts.publishedAt,
-      institutionSlug: institutions.slug,
-      institutionName: institutions.name
-    })
-    .from(posts)
-    .leftJoin(institutions, eq(posts.institutionId, institutions.id))
-    .orderBy(desc(posts.publishedAt))
-    .limit(10);
-    
-    res.json({
-      items: items.map(p => ({
-        id: p.id,
-        post_type: p.postType,
-        title: p.title,
-        excerpt: p.excerpt,
-        published_at: p.publishedAt,
-        institution_slug: p.institutionSlug,
-        institution_name: p.institutionName || 'Yayasan Darussolah'
-      }))
-    });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: 'Internal Server Error' });
+app.get('/v1/public/:tenant_slug/institutions/:institution_slug', asyncHandler(async (req, res) => {
+  const tenantSlug = sanitizeString(req.params.tenant_slug);
+  const institutionSlug = sanitizeString(req.params.institution_slug);
+  
+  if (!tenantSlug || !institutionSlug) {
+    throw new ValidationError('Tenant and institution slugs are required');
   }
-});
-
-app.get('/v1/public/:tenant_slug/institutions/:institution_slug/posts', async (req, res) => {
-  try {
-    const { institution_slug } = req.params;
-    const institution = await db.select().from(institutions).where(eq(institutions.slug, institution_slug)).limit(1);
-    if (!institution.length) return res.status(404).json({ error: 'Institution not found' });
-
-    const items = await db.select().from(posts).where(eq(posts.institutionId, institution[0].id));
-    res.json({
-      items: items.map(p => ({
-        post_type: p.postType,
-        title: p.title,
-        excerpt: p.excerpt,
-        published_at: p.publishedAt
-      }))
-    });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: 'Internal Server Error' });
+  
+  const data = await db.select().from(institutions).where(eq(institutions.slug, institutionSlug)).limit(1);
+  if (!data.length) {
+    throw new ValidationError('Institution not found', 'institution_slug');
   }
-});
+  const row = data[0];
+  res.json({ id: row.id, slug: row.slug, name: row.name, description: row.description, logo_url: row.logoUrl });
+}));
 
-app.post('/v1/public/:tenant_slug/registrations', async (req, res) => {
-  try {
-    const { 
-      institution_id, 
-      registration_type, 
-      academic_year, 
-      student_full_name, 
-      birth_place,
-      birth_date,
-      gender,
-      address,
-      father_name,
-      mother_name,
-      father_phone, 
-      mother_phone,
-      documents,
-      notes
-    } = req.body;
-    
-    // Generate a simple application number
-    const applicationNo = "REG-" + Math.floor(Math.random() * 1000000);
-    
-    const result = await db.insert(registrations).values({
-      institutionId: parseInt(institution_id?.toString().replace(/\D/g, '') || '0') || null,
-      registrationType: registration_type,
-      academicYear: academic_year || '2026/2027',
-      studentFullName: student_full_name,
-      birthPlace: birth_place,
-      birthDate: birth_date,
-      gender: gender,
-      address: address,
-      fatherName: father_name,
-      motherName: mother_name,
-      fatherPhone: father_phone,
-      motherPhone: mother_phone,
-      documents: JSON.stringify(documents || []),
-      notes,
-      applicationNo,
-      status: 'pending'
-    }).returning();
-    
-    res.status(201).json({
-      id: result[0].id,
-      application_no: result[0].applicationNo,
-      status: result[0].status
-    });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: 'Internal Server Error' });
+app.get('/v1/public/:tenant_slug/posts', asyncHandler(async (req, res) => {
+  const items = await db.select({
+    id: posts.id,
+    title: posts.title,
+    excerpt: posts.excerpt,
+    postType: posts.postType,
+    publishedAt: posts.publishedAt,
+    institutionSlug: institutions.slug,
+    institutionName: institutions.name
+  })
+  .from(posts)
+  .leftJoin(institutions, eq(posts.institutionId, institutions.id))
+  .orderBy(desc(posts.publishedAt))
+  .limit(10);
+  
+  res.json({
+    items: items.map(p => ({
+      id: p.id,
+      post_type: p.postType,
+      title: p.title,
+      excerpt: p.excerpt,
+      published_at: p.publishedAt,
+      institution_slug: p.institutionSlug,
+      institution_name: p.institutionName || 'Yayasan Darussolah'
+    }))
+  });
+}));
+
+app.get('/v1/public/:tenant_slug/institutions/:institution_slug/posts', asyncHandler(async (req, res) => {
+  const institutionSlug = sanitizeString(req.params.institution_slug);
+  
+  if (!institutionSlug) {
+    throw new ValidationError('Institution slug is required');
   }
-});
+  
+  const institution = await db.select().from(institutions).where(eq(institutions.slug, institutionSlug)).limit(1);
+  if (!institution.length) {
+    throw new ValidationError('Institution not found', 'institution_slug');
+  }
+
+  const items = await db.select().from(posts).where(eq(posts.institutionId, institution[0].id));
+  res.json({
+    items: items.map(p => ({
+      post_type: p.postType,
+      title: p.title,
+      excerpt: p.excerpt,
+      published_at: p.publishedAt
+    }))
+  });
+}));
+
+app.post('/v1/public/:tenant_slug/registrations', asyncHandler(async (req, res) => {
+  const { 
+    institution_id, 
+    registration_type, 
+    academic_year, 
+    student_full_name, 
+    birth_place,
+    birth_date,
+    gender,
+    address,
+    father_name,
+    mother_name,
+    father_phone, 
+    mother_phone,
+    documents,
+    notes
+  } = req.body;
+  
+  // Validate required fields
+  const validation = validateRequiredFields(req.body, ['student_full_name']);
+  if (!validation.valid) {
+    throw new ValidationError(`Missing required fields: ${validation.missing.join(', ')}`);
+  }
+  
+  // Sanitize inputs
+  const sanitizedFullName = sanitizeString(student_full_name);
+  const sanitizedBirthPlace = sanitizeString(birth_place);
+  const sanitizedAddress = sanitizeString(address);
+  const sanitizedFatherName = sanitizeString(father_name);
+  const sanitizedMotherName = sanitizeString(mother_name);
+  const sanitizedFatherPhone = sanitizeString(father_phone);
+  const sanitizedMotherPhone = sanitizeString(mother_phone);
+  
+  // Validate phone numbers if provided
+  if (father_phone && !isValidPhone(father_phone)) {
+    throw new ValidationError('Invalid father phone number format', 'father_phone');
+  }
+  if (mother_phone && !isValidPhone(mother_phone)) {
+    throw new ValidationError('Invalid mother phone number format', 'mother_phone');
+  }
+  
+  // Validate date if provided
+  if (birth_date && !isValidDate(birth_date)) {
+    throw new ValidationError('Invalid birth date format. Use YYYY-MM-DD', 'birth_date');
+  }
+  
+  // Generate a unique application number with timestamp
+  const applicationNo = "REG-" + Date.now() + "-" + Math.floor(Math.random() * 10000);
+  
+  const result = await db.insert(registrations).values({
+    institutionId: isValidIntegerId(institution_id) ? parseInt(institution_id) : null,
+    registrationType: sanitizeString(registration_type),
+    academicYear: sanitizeString(academic_year) || '2026/2027',
+    studentFullName: sanitizedFullName,
+    birthPlace: sanitizedBirthPlace,
+    birthDate: birth_date,
+    gender: sanitizeString(gender),
+    address: sanitizedAddress,
+    fatherName: sanitizedFatherName,
+    motherName: sanitizedMotherName,
+    fatherPhone: sanitizedFatherPhone,
+    motherPhone: sanitizedMotherPhone,
+    documents: JSON.stringify(Array.isArray(documents) ? documents : []),
+    notes: sanitizeString(notes),
+    applicationNo,
+    status: 'pending'
+  }).returning();
+  
+  res.status(201).json({
+    id: result[0].id,
+    application_no: result[0].applicationNo,
+    status: result[0].status
+  });
+}));
 
 // Private endpoints (Protected by Firebase Auth middleware)
 app.get('/v1/private/:tenant_slug/me', requireAuth, resolveTenant, async (req, res) => {

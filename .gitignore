@@ -1,0 +1,14 @@
+```
+# Environment variables
+.env.local
+.env.*
+
+# Dependencies
+node_modules/
+
+# Editors
+.vscode/
+
+# Logs
+*.log
+```
