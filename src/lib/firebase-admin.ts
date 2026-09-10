@@ -8,9 +8,10 @@ const firebaseConfig = getFirebaseConfig();
 if (!getApps().length) {
   initializeApp({
     projectId: firebaseConfig.projectId,
-    appId: firebaseConfig.appId,
-    // Note: Admin SDK doesn't need apiKey for server-side operations
-    // but we include it for completeness if needed by other parts of the app
+    // Note: Admin SDK doesn't need appId or apiKey for server-side operations
+    credential: process.env.FIREBASE_ADMIN_CREDENTIAL 
+      ? JSON.parse(process.env.FIREBASE_ADMIN_CREDENTIAL)
+      : undefined,
   });
 }
 

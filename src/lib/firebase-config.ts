@@ -13,14 +13,14 @@ import { config as dotenvConfig } from 'dotenv';
 dotenvConfig();
 
 export interface FirebaseConfig {
-  projectId: string;
-  appId: string;
-  apiKey: string;
-  authDomain: string;
-  storageBucket: string;
-  messagingSenderId: string;
+  projectId: string | undefined;
+  appId: string | undefined;
+  apiKey: string | undefined;
+  authDomain: string | undefined;
+  storageBucket: string | undefined;
+  messagingSenderId: string | undefined;
   measurementId: string;
-  oAuthClientId: string;
+  oAuthClientId: string | undefined;
   recaptchaSiteKey: string;
 }
 
