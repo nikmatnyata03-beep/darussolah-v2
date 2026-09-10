@@ -1,0 +1,11 @@
+# Development variables for Cloudflare Workers
+# Copy this file to .dev.vars untuk local development
+
+ENVIRONMENT=development
+
+# Secrets (akan di-override oleh wrangler secret put untuk production)
+OPENAI_API_KEY=your_openai_api_key_here
+FIREBASE_API_KEY=your_firebase_api_key_here
+FIREBASE_PROJECT_ID=your_project_id
+DATABASE_URL=sqlite:./dev.db
+JWT_SECRET=your_jwt_secret_min_32_chars

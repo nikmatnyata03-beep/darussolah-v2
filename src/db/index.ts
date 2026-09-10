@@ -4,9 +4,15 @@ import * as schema from './schema.ts';
 
 const { Pool } = pg;
 
+// Extend globalThis type for our custom properties
+declare global {
+  // eslint-disable-next-line no-var
+  var _postgresPool: pg.Pool | undefined;
+}
+
 export const createPool = () => {
-  if (!global._postgresPool) {
-    global._postgresPool = new Pool({
+  if (!globalThis._postgresPool) {
+    globalThis._postgresPool = new Pool({
       host: process.env.SQL_HOST,
       user: process.env.SQL_USER,
       password: process.env.SQL_PASSWORD,
@@ -15,11 +21,11 @@ export const createPool = () => {
       connectionTimeoutMillis: 15000,
     });
 
-    global._postgresPool.on('error', (err) => {
+    globalThis._postgresPool.on('error', (err: Error) => {
       console.error('Unexpected error on idle SQL pool client:', err);
     });
   }
-  return global._postgresPool;
+  return globalThis._postgresPool;
 };
 
 const pool = createPool();

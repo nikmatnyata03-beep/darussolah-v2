@@ -2,8 +2,14 @@ import express from 'express';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import helmet from 'helmet';
+import rateLimit from 'express-rate-limit';
+import morgan from 'morgan';
+import logger from './src/utils/logger.ts';
 import { requireAuth } from './src/middleware/auth.ts';
 import { resolveTenant } from './src/middleware/tenant.ts';
+import { errorHandler, notFoundHandler, asyncHandler, ValidationError } from './src/middleware/error-handler.ts';
+import { sanitizeString, validateRequiredFields, isValidEmail, isValidPhone, isValidDate, isValidIntegerId } from './src/lib/validation.ts';
 import { db } from './src/db/index.ts';
 import { attendance, registrations, foundations, institutions, posts, users, learningSubmissions, students, staff, content, adminRecords, invoices, studentProgress, leaveRequests, feedbacks } from './src/db/schema.ts';
 import { eq, and, desc } from 'drizzle-orm';
@@ -11,165 +17,216 @@ import { eq, and, desc } from 'drizzle-orm';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+const PORT = process.env.PORT || 3000;
+
 const app = express();
 
-app.get('/api/fix-db', async (req, res) => {
-  try {
-    const { sql } = await import('drizzle-orm');
-    await db.execute(sql`ALTER TABLE staff DROP COLUMN institution_id;`);
-    res.send('Dropped');
-  } catch(e) {
-    res.send(e.message);
-  }
-});
+// Security: Helmet for security headers
+app.use(helmet({
+  contentSecurityPolicy: false, // Disable if you need inline scripts
+  crossOriginEmbedderPolicy: false
+}));
 
-const PORT = 3000;
+// Security: Rate limiting
+const limiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 100, // Limit each IP to 100 requests per windowMs
+  message: { error: 'Too many requests, please try again later.' },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+app.use('/v1/', limiter);
+
+// Stricter rate limit for auth endpoints
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 5, // Limit each IP to 5 requests per windowMs
+  message: { error: 'Too many authentication attempts, please try again later.' },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+app.use('/v1/private/', authLimiter);
+
+// Logging: Morgan for HTTP request logging
+app.use(morgan('combined', {
+  stream: {
+    write: (message) => logger.info(message.trim())
+  }
+}));
 
 app.use(express.json());
 
+// Apply global error handler AFTER all routes
+app.use(errorHandler);
+
 // Public endpoints
-app.get('/v1/public/:tenant_slug/foundation', async (req, res) => {
-  try {
-    const data = await db.select().from(foundations).where(eq(foundations.slug, req.params.tenant_slug)).limit(1);
-    if (!data.length) return res.status(404).json({ error: 'Foundation not found' });
-    const row = data[0];
-    res.json({ id: row.id, name: row.name, description: row.description, logo_url: row.logoUrl });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: 'Internal Server Error' });
+app.get('/v1/public/:tenant_slug/foundation', asyncHandler(async (req, res) => {
+  const tenantSlug = sanitizeString(req.params.tenant_slug);
+  if (!tenantSlug) {
+    throw new ValidationError('Tenant slug is required');
   }
-});
-
-app.get('/v1/public/:tenant_slug/institutions', async (req, res) => {
-  try {
-    const data = await db.select().from(institutions);
-    res.json({
-      items: data.map(row => ({ id: row.id, slug: row.slug, name: row.name, logo_url: row.logoUrl, description: row.description }))
-    });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: 'Internal Server Error' });
+  
+  const data = await db.select().from(foundations).where(eq(foundations.slug, tenantSlug)).limit(1);
+  if (!data.length) {
+    throw new ValidationError('Foundation not found', 'tenant_slug');
   }
-});
+  const row = data[0];
+  res.json({ id: row.id, name: row.name, description: row.description, logo_url: row.logoUrl });
+}));
 
-app.get('/v1/public/:tenant_slug/institutions/:institution_slug', async (req, res) => {
-  try {
-    const { institution_slug } = req.params;
-    const data = await db.select().from(institutions).where(eq(institutions.slug, institution_slug)).limit(1);
-    if (!data.length) return res.status(404).json({ error: 'Institution not found' });
-    const row = data[0];
-    res.json({ id: row.id, slug: row.slug, name: row.name, description: row.description, logo_url: row.logoUrl });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: 'Internal Server Error' });
+app.get('/v1/public/:tenant_slug/institutions', asyncHandler(async (req, res) => {
+  const tenantSlug = sanitizeString(req.params.tenant_slug);
+  if (!tenantSlug) {
+    throw new ValidationError('Tenant slug is required');
   }
-});
+  
+  const data = await db.select().from(institutions).where(eq(institutions.slug, tenantSlug));
+  res.json({
+    items: data.map(row => ({ id: row.id, slug: row.slug, name: row.name, logo_url: row.logoUrl, description: row.description }))
+  });
+}));
 
-app.get('/v1/public/:tenant_slug/posts', async (req, res) => {
-  try {
-    const items = await db.select({
-      id: posts.id,
-      title: posts.title,
-      excerpt: posts.excerpt,
-      postType: posts.postType,
-      publishedAt: posts.publishedAt,
-      institutionSlug: institutions.slug,
-      institutionName: institutions.name
-    })
-    .from(posts)
-    .leftJoin(institutions, eq(posts.institutionId, institutions.id))
-    .orderBy(desc(posts.publishedAt))
-    .limit(10);
-    
-    res.json({
-      items: items.map(p => ({
-        id: p.id,
-        post_type: p.postType,
-        title: p.title,
-        excerpt: p.excerpt,
-        published_at: p.publishedAt,
-        institution_slug: p.institutionSlug,
-        institution_name: p.institutionName || 'Yayasan Darussolah'
-      }))
-    });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: 'Internal Server Error' });
+app.get('/v1/public/:tenant_slug/institutions/:institution_slug', asyncHandler(async (req, res) => {
+  const tenantSlug = sanitizeString(req.params.tenant_slug);
+  const institutionSlug = sanitizeString(req.params.institution_slug);
+  
+  if (!tenantSlug || !institutionSlug) {
+    throw new ValidationError('Tenant and institution slugs are required');
   }
-});
-
-app.get('/v1/public/:tenant_slug/institutions/:institution_slug/posts', async (req, res) => {
-  try {
-    const { institution_slug } = req.params;
-    const institution = await db.select().from(institutions).where(eq(institutions.slug, institution_slug)).limit(1);
-    if (!institution.length) return res.status(404).json({ error: 'Institution not found' });
-
-    const items = await db.select().from(posts).where(eq(posts.institutionId, institution[0].id));
-    res.json({
-      items: items.map(p => ({
-        post_type: p.postType,
-        title: p.title,
-        excerpt: p.excerpt,
-        published_at: p.publishedAt
-      }))
-    });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: 'Internal Server Error' });
+  
+  const data = await db.select().from(institutions).where(eq(institutions.slug, institutionSlug)).limit(1);
+  if (!data.length) {
+    throw new ValidationError('Institution not found', 'institution_slug');
   }
-});
+  const row = data[0];
+  res.json({ id: row.id, slug: row.slug, name: row.name, description: row.description, logo_url: row.logoUrl });
+}));
 
-app.post('/v1/public/:tenant_slug/registrations', async (req, res) => {
-  try {
-    const { 
-      institution_id, 
-      registration_type, 
-      academic_year, 
-      student_full_name, 
-      birth_place,
-      birth_date,
-      gender,
-      address,
-      father_name,
-      mother_name,
-      father_phone, 
-      mother_phone,
-      documents,
-      notes
-    } = req.body;
-    
-    // Generate a simple application number
-    const applicationNo = "REG-" + Math.floor(Math.random() * 1000000);
-    
-    const result = await db.insert(registrations).values({
-      institutionId: parseInt(institution_id?.toString().replace(/\D/g, '') || '0') || null,
-      registrationType: registration_type,
-      academicYear: academic_year || '2026/2027',
-      studentFullName: student_full_name,
-      birthPlace: birth_place,
-      birthDate: birth_date,
-      gender: gender,
-      address: address,
-      fatherName: father_name,
-      motherName: mother_name,
-      fatherPhone: father_phone,
-      motherPhone: mother_phone,
-      documents: JSON.stringify(documents || []),
-      notes,
-      applicationNo,
-      status: 'pending'
-    }).returning();
-    
-    res.status(201).json({
-      id: result[0].id,
-      application_no: result[0].applicationNo,
-      status: result[0].status
-    });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: 'Internal Server Error' });
+app.get('/v1/public/:tenant_slug/posts', asyncHandler(async (req, res) => {
+  const items = await db.select({
+    id: posts.id,
+    title: posts.title,
+    excerpt: posts.excerpt,
+    postType: posts.postType,
+    publishedAt: posts.publishedAt,
+    institutionSlug: institutions.slug,
+    institutionName: institutions.name
+  })
+  .from(posts)
+  .leftJoin(institutions, eq(posts.institutionId, institutions.id))
+  .orderBy(desc(posts.publishedAt))
+  .limit(10);
+  
+  res.json({
+    items: items.map(p => ({
+      id: p.id,
+      post_type: p.postType,
+      title: p.title,
+      excerpt: p.excerpt,
+      published_at: p.publishedAt,
+      institution_slug: p.institutionSlug,
+      institution_name: p.institutionName || 'Yayasan Darussolah'
+    }))
+  });
+}));
+
+app.get('/v1/public/:tenant_slug/institutions/:institution_slug/posts', asyncHandler(async (req, res) => {
+  const institutionSlug = sanitizeString(req.params.institution_slug);
+  
+  if (!institutionSlug) {
+    throw new ValidationError('Institution slug is required');
   }
-});
+  
+  const institution = await db.select().from(institutions).where(eq(institutions.slug, institutionSlug)).limit(1);
+  if (!institution.length) {
+    throw new ValidationError('Institution not found', 'institution_slug');
+  }
+
+  const items = await db.select().from(posts).where(eq(posts.institutionId, institution[0].id));
+  res.json({
+    items: items.map(p => ({
+      post_type: p.postType,
+      title: p.title,
+      excerpt: p.excerpt,
+      published_at: p.publishedAt
+    }))
+  });
+}));
+
+app.post('/v1/public/:tenant_slug/registrations', asyncHandler(async (req, res) => {
+  const { 
+    institution_id, 
+    registration_type, 
+    academic_year, 
+    student_full_name, 
+    birth_place,
+    birth_date,
+    gender,
+    address,
+    father_name,
+    mother_name,
+    father_phone, 
+    mother_phone,
+    documents,
+    notes
+  } = req.body;
+  
+  // Validate required fields
+  const validation = validateRequiredFields(req.body, ['student_full_name']);
+  if (!validation.valid) {
+    throw new ValidationError(`Missing required fields: ${validation.missing.join(', ')}`);
+  }
+  
+  // Sanitize inputs
+  const sanitizedFullName = sanitizeString(student_full_name);
+  const sanitizedBirthPlace = sanitizeString(birth_place);
+  const sanitizedAddress = sanitizeString(address);
+  const sanitizedFatherName = sanitizeString(father_name);
+  const sanitizedMotherName = sanitizeString(mother_name);
+  const sanitizedFatherPhone = sanitizeString(father_phone);
+  const sanitizedMotherPhone = sanitizeString(mother_phone);
+  
+  // Validate phone numbers if provided
+  if (father_phone && !isValidPhone(father_phone)) {
+    throw new ValidationError('Invalid father phone number format', 'father_phone');
+  }
+  if (mother_phone && !isValidPhone(mother_phone)) {
+    throw new ValidationError('Invalid mother phone number format', 'mother_phone');
+  }
+  
+  // Validate date if provided
+  if (birth_date && !isValidDate(birth_date)) {
+    throw new ValidationError('Invalid birth date format. Use YYYY-MM-DD', 'birth_date');
+  }
+  
+  // Generate a unique application number with timestamp
+  const applicationNo = "REG-" + Date.now() + "-" + Math.floor(Math.random() * 10000);
+  
+  const result = await db.insert(registrations).values({
+    institutionId: isValidIntegerId(institution_id) ? parseInt(institution_id) : null,
+    registrationType: sanitizeString(registration_type),
+    academicYear: sanitizeString(academic_year) || '2026/2027',
+    studentFullName: sanitizedFullName,
+    birthPlace: sanitizedBirthPlace,
+    birthDate: birth_date,
+    gender: sanitizeString(gender),
+    address: sanitizedAddress,
+    fatherName: sanitizedFatherName,
+    motherName: sanitizedMotherName,
+    fatherPhone: sanitizedFatherPhone,
+    motherPhone: sanitizedMotherPhone,
+    documents: JSON.stringify(Array.isArray(documents) ? documents : []),
+    notes: sanitizeString(notes),
+    applicationNo,
+    status: 'pending'
+  }).returning();
+  
+  res.status(201).json({
+    id: result[0].id,
+    application_no: result[0].applicationNo,
+    status: result[0].status
+  });
+}));
 
 // Private endpoints (Protected by Firebase Auth middleware)
 app.get('/v1/private/:tenant_slug/me', requireAuth, resolveTenant, async (req, res) => {
@@ -237,76 +294,98 @@ app.get('/v1/private/:tenant_slug/attendance', requireAuth, resolveTenant, async
   }
 });
 
-app.put('/v1/private/:tenant_slug/attendance', requireAuth, resolveTenant, async (req, res) => {
-  try {
-    const payload = camelize(req.body);
-    const classId = payload.classId;
-    const date = payload.attendanceDate;
-    const recordKey = `${classId}:${date}`;
-    
-    const existing = await db.select().from(adminRecords).where(
-      and(eq(adminRecords.module, 'attendance'), eq(adminRecords.recordKey, recordKey))
-    ).limit(1);
-    
-    if (existing.length) {
-      await db.update(adminRecords)
-        .set({ payload: req.body })
-        .where(eq(adminRecords.id, existing[0].id));
-    } else {
-      await db.insert(adminRecords).values({
-        module: 'attendance',
-        recordKey: recordKey,
-        payload: req.body
-      });
-    }
-    res.json({ success: true });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: 'Internal Server Error' });
+app.put('/v1/private/:tenant_slug/attendance', asyncHandler(async (req, res) => {
+  const payload = camelize(req.body);
+  const classId = sanitizeString(payload.classId);
+  const date = sanitizeString(payload.attendanceDate);
+  
+  // Validate required fields
+  const validation = validateRequiredFields(payload, ['classId', 'attendanceDate']);
+  if (!validation.valid) {
+    throw new ValidationError(`Missing required fields: ${validation.missing.join(', ')}`);
   }
-});
-
-
-
-app.put('/v1/private/:tenant_slug/learning/submissions/:id', requireAuth, resolveTenant, async (req, res) => {
-  try {
-    const id = parseInt(req.params.id);
-    const existing = await db.select().from(adminRecords).where(eq(adminRecords.id, id)).limit(1);
-    if (!existing.length) {
-      return res.status(404).json({ error: 'Not Found' });
-    }
-    const updatedPayload = { ...existing[0].payload, ...req.body };
-    await db.update(adminRecords).set({ payload: updatedPayload }).where(eq(adminRecords.id, id));
-    res.json({ success: true, item: updatedPayload });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: 'Internal Server Error' });
+  
+  // Validate date format
+  if (date && !isValidDate(date)) {
+    throw new ValidationError('Invalid date format. Use YYYY-MM-DD', 'attendanceDate');
   }
-});
+  
+  const recordKey = `${classId}:${date}`;
+  
+  const existing = await db.select().from(adminRecords).where(
+    and(eq(adminRecords.module, 'attendance'), eq(adminRecords.recordKey, recordKey))
+  ).limit(1);
+  
+  if (existing.length) {
+    await db.update(adminRecords)
+      .set({ payload: req.body })
+      .where(eq(adminRecords.id, existing[0].id));
+  } else {
+    await db.insert(adminRecords).values({
+      module: 'attendance',
+      recordKey: recordKey,
+      payload: req.body
+    });
+  }
+  res.json({ success: true });
+}));
 
-app.post('/v1/private/:tenant_slug/learning/submissions', requireAuth, resolveTenant, async (req, res) => {
-  try {
-    const { resource_id, student_id, file_path, note } = req.body;
+
+
+app.put('/v1/private/:tenant_slug/learning/submissions/:id', asyncHandler(async (req, res) => {
+  const id = parseInt(req.params.id);
+  
+  // Validate ID
+  if (isNaN(id) || id <= 0) {
+    throw new ValidationError('Invalid submission ID', 'id');
+  }
+  
+  const existing = await db.select().from(adminRecords).where(eq(adminRecords.id, id)).limit(1);
+  if (!existing.length) {
+    throw new ValidationError('Submission not found', 'id');
+  }
+  
+  const updatedPayload = { ...existing[0].payload, ...camelize(req.body) };
+  
+  // Sanitize note if present
+  if (typeof updatedPayload.note === 'string') {
+    updatedPayload.note = sanitizeString(updatedPayload.note);
+  }
+  
+  await db.update(adminRecords).set({ payload: updatedPayload }).where(eq(adminRecords.id, id));
+  res.json({ success: true, item: updatedPayload });
+}));
+
+app.post('/v1/private/:tenant_slug/learning/submissions', asyncHandler(async (req, res) => {
+  const { resource_id, student_id, file_path, note } = req.body;
+  
+  // Validate required fields
+  const validation = validateRequiredFields(req.body, ['resource_id', 'student_id']);
+  if (!validation.valid) {
+    throw new ValidationError(`Missing required fields: ${validation.missing.join(', ')}`);
+  }
+  
+  // Validate IDs
+  if (!isValidIntegerId(student_id)) {
+    throw new ValidationError('Invalid student ID format', 'student_id');
+  }
+  
+  // Sanitize inputs
+  const sanitizedResourceId = sanitizeString(resource_id);
+  const sanitizedFilePath = sanitizeString(file_path);
+  const sanitizedNote = sanitizeString(note);
+  
+  const result = await db.insert(learningSubmissions)
+    .values({
+      resourceId: sanitizedResourceId,
+      studentId: parseInt(student_id),
+      filePath: sanitizedFilePath,
+      note: sanitizedNote,
+    })
+    .returning();
     
-    if (!resource_id || !student_id) {
-      return res.status(400).json({ error: 'resource_id and student_id are required' });
-    }
-
-    const result = await db.insert(learningSubmissions)
-      .values({
-        resourceId: resource_id,
-        studentId: student_id,
-        filePath: file_path,
-        note: note,
-      })
-      .returning();
-      
-    res.status(201).json(decamelize(result[0]));
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: 'Internal Server Error' });
-  }
-});
+  res.status(201).json(decamelize(result[0]));
+}));
 
 
 
@@ -364,37 +443,57 @@ app.get('/v1/private/:tenant_slug/classes', requireAuth, resolveTenant, async (r
 
 app.get('/v1/private/:tenant_slug/learning', requireAuth, resolveTenant, async (req, res) => { res.json({ items: [] }); });
 app.get('/v1/private/:tenant_slug/learning/submissions', requireAuth, resolveTenant, async (req, res) => { res.json({ items: [] }); });
-app.post('/v1/private/:tenant_slug/learning', requireAuth, resolveTenant, async (req, res) => {
-  try {
-    const payload = camelize(req.body);
-    // Dummy insert to adminRecords just to store it for now
-    await db.insert(adminRecords).values({
-      module: 'learning',
-      recordKey: `${payload.classId || 'default'}:${Date.now()}`,
-      payload: req.body
-    });
-    res.json({ success: true, item: req.body });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: 'Internal Server Error' });
+app.post('/v1/private/:tenant_slug/learning', asyncHandler(async (req, res) => {
+  const payload = camelize(req.body);
+  
+  // Validate required fields
+  const validation = validateRequiredFields(payload, ['classId']);
+  if (!validation.valid) {
+    throw new ValidationError(`Missing required fields: ${validation.missing.join(', ')}`);
   }
-});
+  
+  // Sanitize inputs
+  if (typeof payload.classId === 'string') {
+    payload.classId = sanitizeString(payload.classId);
+  }
+  
+  // Dummy insert to adminRecords just to store it for now
+  await db.insert(adminRecords).values({
+    module: 'learning',
+    recordKey: `${payload.classId}:${Date.now()}`,
+    payload: req.body
+  });
+  res.json({ success: true, item: req.body });
+}));
 
 
-app.post('/v1/private/:tenant_slug/learning/submissions', requireAuth, resolveTenant, async (req, res) => {
-  try {
-    const payload = camelize(req.body);
-    const result = await db.insert(adminRecords).values({
-      module: 'submissions',
-      recordKey: `${payload.resourceId || 'unknown'}:${payload.studentId || 'unknown'}:${Date.now()}`,
-      payload: req.body
-    }).returning();
-    res.json({ success: true, item: { id: result[0].id, ...req.body } });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: 'Internal Server Error' });
+app.post('/v1/private/:tenant_slug/learning/submissions', asyncHandler(async (req, res) => {
+  const payload = camelize(req.body);
+  
+  // Validate required fields
+  const validation = validateRequiredFields(payload, ['resourceId', 'studentId']);
+  if (!validation.valid) {
+    throw new ValidationError(`Missing required fields: ${validation.missing.join(', ')}`);
   }
-});
+  
+  // Sanitize inputs
+  if (typeof payload.resourceId === 'string') {
+    payload.resourceId = sanitizeString(payload.resourceId);
+  }
+  if (typeof payload.studentId === 'string') {
+    if (!isValidIntegerId(payload.studentId)) {
+      throw new ValidationError('Invalid student ID format', 'studentId');
+    }
+    payload.studentId = parseInt(payload.studentId);
+  }
+  
+  const result = await db.insert(adminRecords).values({
+    module: 'submissions',
+    recordKey: `${payload.resourceId}:${payload.studentId}:${Date.now()}`,
+    payload: req.body
+  }).returning();
+  res.json({ success: true, item: { id: result[0].id, ...req.body } });
+}));
 
 
 
@@ -433,30 +532,63 @@ app.get('/v1/private/:tenant_slug/wali/dashboard/:student_id', requireAuth, reso
   }
 });
 
-app.post('/v1/private/:tenant_slug/wali/leave', requireAuth, resolveTenant, async (req, res) => {
-  try {
-    const payload = camelize(req.body);
-    if (payload.studentId) {
-       payload.studentId = parseInt(payload.studentId);
-    }
-    const result = await db.insert(leaveRequests).values(payload).returning();
-    res.status(201).json(decamelize(result[0]));
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: 'Internal Server Error' });
+app.post('/v1/private/:tenant_slug/wali/leave', asyncHandler(async (req, res) => {
+  const payload = camelize(req.body);
+  
+  // Validate required fields
+  const validation = validateRequiredFields(payload, ['studentId', 'reason']);
+  if (!validation.valid) {
+    throw new ValidationError(`Missing required fields: ${validation.missing.join(', ')}`);
   }
-});
+  
+  // Validate student ID
+  if (!isValidIntegerId(payload.studentId)) {
+    throw new ValidationError('Invalid student ID format', 'studentId');
+  }
+  
+  // Sanitize inputs
+  if (typeof payload.reason === 'string') {
+    payload.reason = sanitizeString(payload.reason);
+  }
+  if (typeof payload.startDate === 'string' && !isValidDate(payload.startDate)) {
+    throw new ValidationError('Invalid start date format. Use YYYY-MM-DD', 'startDate');
+  }
+  if (typeof payload.endDate === 'string' && !isValidDate(payload.endDate)) {
+    throw new ValidationError('Invalid end date format. Use YYYY-MM-DD', 'endDate');
+  }
+  
+  payload.studentId = parseInt(payload.studentId);
+  
+  const result = await db.insert(leaveRequests).values(payload).returning();
+  res.status(201).json(decamelize(result[0]));
+}));
 
-app.post('/v1/private/:tenant_slug/wali/feedback', requireAuth, resolveTenant, async (req, res) => {
-  try {
-    const payload = camelize(req.body);
-    const result = await db.insert(feedbacks).values(payload).returning();
-    res.status(201).json(decamelize(result[0]));
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: 'Internal Server Error' });
+app.post('/v1/private/:tenant_slug/wali/feedback', asyncHandler(async (req, res) => {
+  const payload = camelize(req.body);
+  
+  // Validate required fields
+  const validation = validateRequiredFields(payload, ['message']);
+  if (!validation.valid) {
+    throw new ValidationError(`Missing required fields: ${validation.missing.join(', ')}`);
   }
-});
+  
+  // Sanitize inputs
+  if (typeof payload.message === 'string') {
+    payload.message = sanitizeString(payload.message);
+  }
+  if (typeof payload.category === 'string') {
+    payload.category = sanitizeString(payload.category);
+  }
+  if (payload.studentId && !isValidIntegerId(payload.studentId)) {
+    throw new ValidationError('Invalid student ID format', 'studentId');
+  }
+  if (payload.studentId) {
+    payload.studentId = parseInt(payload.studentId);
+  }
+  
+  const result = await db.insert(feedbacks).values(payload).returning();
+  res.status(201).json(decamelize(result[0]));
+}));
 
 app.get('/v1/private/:tenant_slug/posts', requireAuth, resolveTenant, async (req, res) => {
   try {
@@ -480,30 +612,46 @@ app.get('/v1/private/:tenant_slug/documents', requireAuth, resolveTenant, async 
 });
 
 
-app.post('/v1/private/:tenant_slug/attendance', requireAuth, resolveTenant, async (req, res) => {
-  try {
-    const { class_id, attendance_date, records } = req.body;
-    if (!records || !Array.isArray(records)) {
-      return res.status(400).json({ error: 'Invalid records' });
-    }
-    
-    // Convert to our attendance schema
-    const values = records.map(r => ({
-      uid: r.student_id.toString(), // The frontend sends student_id as uid here
-      date: attendance_date,
-      status: r.status
-    }));
-
-    // In a real production app we would do an UPSERT here. 
-    // Since this is a simple schema, we just insert.
-    await db.insert(attendance).values(values);
-
-    res.json({ success: true, count: values.length });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: 'Internal Server Error' });
+app.post('/v1/private/:tenant_slug/attendance', asyncHandler(async (req, res) => {
+  const { class_id, attendance_date, records } = req.body;
+  
+  // Validate required fields
+  const validation = validateRequiredFields(req.body, ['class_id', 'attendance_date', 'records']);
+  if (!validation.valid) {
+    throw new ValidationError(`Missing required fields: ${validation.missing.join(', ')}`);
   }
-});
+  
+  if (!Array.isArray(records)) {
+    throw new ValidationError('Records must be an array', 'records');
+  }
+  
+  // Sanitize inputs
+  const sanitizedClassId = sanitizeString(class_id);
+  const sanitizedDate = sanitizeString(attendance_date);
+  
+  // Validate date format
+  if (sanitizedDate && !isValidDate(sanitizedDate)) {
+    throw new ValidationError('Invalid date format. Use YYYY-MM-DD', 'attendance_date');
+  }
+  
+  // Convert to our attendance schema with validation
+  const values = records.map((r: any, index: number) => {
+    if (!r.student_id || !r.status) {
+      throw new ValidationError(`Record ${index} missing student_id or status`);
+    }
+    return {
+      uid: r.student_id.toString(),
+      date: sanitizedDate,
+      status: sanitizeString(r.status)
+    };
+  });
+
+  // In a real production app we would do an UPSERT here. 
+  // Since this is a simple schema, we just insert.
+  await db.insert(attendance).values(values);
+
+  res.json({ success: true, count: values.length });
+}));
 
 
 app.get('/v1/private/:tenant_slug/admin/progress', requireAuth, resolveTenant, async (req, res) => {
@@ -516,26 +664,37 @@ app.get('/v1/private/:tenant_slug/admin/progress', requireAuth, resolveTenant, a
   }
 });
 
-app.post('/v1/private/:tenant_slug/admin/progress', requireAuth, resolveTenant, async (req, res) => {
-  try {
-    const { student_id, type, current_value, target, notes, status } = req.body;
-    
-    // Convert to schema
-    const val = {
-      studentId: parseInt(student_id),
-      currentValue: current_value || type, // save type in currentValue if needed, or target
-      target: target,
-      notes: notes || (status ? 'Status: ' + status : '')
-    };
-
-    await db.insert(studentProgress).values(val);
-
-    res.json({ success: true });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: 'Internal Server Error' });
+app.post('/v1/private/:tenant_slug/admin/progress', asyncHandler(async (req, res) => {
+  const { student_id, type, current_value, target, notes, status } = req.body;
+  
+  // Validate required fields
+  const validation = validateRequiredFields(req.body, ['student_id', 'type']);
+  if (!validation.valid) {
+    throw new ValidationError(`Missing required fields: ${validation.missing.join(', ')}`);
   }
-});
+  
+  // Validate student_id is integer
+  if (!isValidIntegerId(student_id)) {
+    throw new ValidationError('Invalid student ID format', 'student_id');
+  }
+  
+  // Sanitize inputs
+  const sanitizedType = sanitizeString(type);
+  const sanitizedNotes = sanitizeString(notes);
+  const sanitizedStatus = sanitizeString(status);
+  
+  // Convert to schema
+  const val = {
+    studentId: parseInt(student_id),
+    currentValue: current_value || sanitizedType,
+    target: sanitizeString(target),
+    notes: sanitizedNotes || (sanitizedStatus ? 'Status: ' + sanitizedStatus : '')
+  };
+
+  await db.insert(studentProgress).values(val);
+
+  res.json({ success: true });
+}));
 
 
 app.get('/v1/private/:tenant_slug/admin/invoices', requireAuth, resolveTenant, async (req, res) => {
@@ -557,41 +716,66 @@ app.get('/v1/private/:tenant_slug/admin/invoices', requireAuth, resolveTenant, a
   }
 });
 
-app.post('/v1/private/:tenant_slug/admin/invoices', requireAuth, resolveTenant, async (req, res) => {
-  try {
-    const { student_id, type, amount, status, notes } = req.body;
-    
-    
-    await db.insert(invoices).values({
-      studentId: parseInt(student_id) || 1,
-      amount: 'Rp ' + (amount ? Number(amount).toLocaleString('id-ID') : '0'),
-      status: status || 'unpaid',
-    institutionId: req.tenantId});
-
-    res.json({ success: true });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: 'Internal Server Error' });
+app.post('/v1/private/:tenant_slug/admin/invoices', asyncHandler(async (req, res) => {
+  const { student_id, type, amount, status, notes } = req.body;
+  
+  // Validate required fields
+  const validation = validateRequiredFields(req.body, ['student_id', 'amount']);
+  if (!validation.valid) {
+    throw new ValidationError(`Missing required fields: ${validation.missing.join(', ')}`);
   }
-});
-
-
-app.post('/v1/private/:tenant_slug/admin/broadcasts', requireAuth, resolveTenant, async (req, res) => {
-  try {
-    const { target, mode, channel, title, message } = req.body;
-    
-    await db.insert(posts).values({
-      title: title,
-      postType: 'broadcast',
-      excerpt: message || (mode + ' via ' + channel + ' to ' + target),
-    });
-
-    res.json({ success: true });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: 'Internal Server Error' });
+  
+  // Validate student_id is integer
+  if (!isValidIntegerId(student_id)) {
+    throw new ValidationError('Invalid student ID format', 'student_id');
   }
-});
+  
+  // Validate amount is numeric
+  const parsedAmount = parseFloat(amount);
+  if (isNaN(parsedAmount) || parsedAmount < 0) {
+    throw new ValidationError('Invalid amount. Must be a positive number', 'amount');
+  }
+  
+  // Sanitize inputs
+  const sanitizedType = sanitizeString(type);
+  const sanitizedStatus = sanitizeString(status);
+  const sanitizedNotes = sanitizeString(notes);
+  
+  await db.insert(invoices).values({
+    studentId: parseInt(student_id),
+    amount: 'Rp ' + parsedAmount.toLocaleString('id-ID'),
+    status: sanitizedStatus || 'unpaid',
+    institutionId: req.tenantId
+  });
+
+  res.json({ success: true });
+}));
+
+
+app.post('/v1/private/:tenant_slug/admin/broadcasts', asyncHandler(async (req, res) => {
+  const { target, mode, channel, title, message } = req.body;
+  
+  // Validate required fields
+  const validation = validateRequiredFields(req.body, ['title', 'message']);
+  if (!validation.valid) {
+    throw new ValidationError(`Missing required fields: ${validation.missing.join(', ')}`);
+  }
+  
+  // Sanitize inputs
+  const sanitizedTitle = sanitizeString(title);
+  const sanitizedMessage = sanitizeString(message);
+  const sanitizedTarget = sanitizeString(target);
+  const sanitizedMode = sanitizeString(mode);
+  const sanitizedChannel = sanitizeString(channel);
+  
+  await db.insert(posts).values({
+    title: sanitizedTitle,
+    postType: 'broadcast',
+    excerpt: sanitizedMessage || (`${sanitizedMode} via ${sanitizedChannel} to ${sanitizedTarget}`),
+  });
+
+  res.json({ success: true });
+}));
 
 // --- Admin Endpoints ---
 
@@ -610,30 +794,50 @@ app.get('/v1/private/:tenant_slug/admin/records', requireAuth, resolveTenant, as
   }
 });
 
-app.post('/v1/private/:tenant_slug/admin/records', requireAuth, resolveTenant, async (req, res) => {
-  try {
-    const payload = camelize(req.body);
-    const result = await db.insert(adminRecords).values(payload).returning();
-    res.status(201).json(decamelize(result[0]));
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: 'Internal Server Error' });
+app.post('/v1/private/:tenant_slug/admin/records', asyncHandler(async (req, res) => {
+  const payload = camelize(req.body);
+  
+  // Validate required fields for admin records
+  const validation = validateRequiredFields(payload, ['module']);
+  if (!validation.valid) {
+    throw new ValidationError(`Missing required fields: ${validation.missing.join(', ')}`);
   }
-});
+  
+  // Sanitize module name
+  if (typeof payload.module === 'string') {
+    payload.module = sanitizeString(payload.module);
+  }
+  
+  const result = await db.insert(adminRecords).values(payload).returning();
+  res.status(201).json(decamelize(result[0]));
+}));
 
-app.put('/v1/private/:tenant_slug/admin/records/:id', requireAuth, resolveTenant, async (req, res) => {
-  try {
-    const id = parseInt(req.params.id);
-    const result = await db.update(adminRecords)
-      .set(camelize(req.body))
-      .where(eq(adminRecords.id, id))
-      .returning();
-    res.json(decamelize(result[0] || {}));
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: 'Internal Server Error' });
+app.put('/v1/private/:tenant_slug/admin/records/:id', asyncHandler(async (req, res) => {
+  const id = parseInt(req.params.id);
+  
+  // Validate ID
+  if (isNaN(id) || id <= 0) {
+    throw new ValidationError('Invalid record ID', 'id');
   }
-});
+  
+  const payload = camelize(req.body);
+  
+  // Sanitize module name if present
+  if (typeof payload.module === 'string') {
+    payload.module = sanitizeString(payload.module);
+  }
+  
+  const result = await db.update(adminRecords)
+    .set(payload)
+    .where(eq(adminRecords.id, id))
+    .returning();
+    
+  if (!result.length) {
+    throw new ValidationError('Record not found', 'id');
+  }
+  
+  res.json(decamelize(result[0]));
+}));
 
 app.get('/v1/private/:tenant_slug/admin/students', requireAuth, resolveTenant, async (req, res) => {
   try {
@@ -645,15 +849,41 @@ app.get('/v1/private/:tenant_slug/admin/students', requireAuth, resolveTenant, a
   }
 });
 
-app.post('/v1/private/:tenant_slug/admin/students', requireAuth, resolveTenant, async (req, res) => {
-  try {
-    const result = await db.insert(students).values({ ...camelize(req.body), institutionId: req.tenantId }).returning();
-    res.status(201).json(decamelize(result[0]));
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: 'Internal Server Error' });
+app.post('/v1/private/:tenant_slug/admin/students', asyncHandler(async (req, res) => {
+  const payload = camelize(req.body);
+  
+  // Validate required fields for students
+  const validation = validateRequiredFields(payload, ['fullName', 'institutionId']);
+  if (!validation.valid) {
+    throw new ValidationError(`Missing required fields: ${validation.missing.join(', ')}`);
   }
-});
+  
+  // Sanitize string inputs
+  if (typeof payload.fullName === 'string') {
+    payload.fullName = sanitizeString(payload.fullName);
+  }
+  if (typeof payload.address === 'string') {
+    payload.address = sanitizeString(payload.address);
+  }
+  if (typeof payload.phone === 'string') {
+    if (!isValidPhone(payload.phone)) {
+      throw new ValidationError('Invalid phone number format', 'phone');
+    }
+    payload.phone = sanitizeString(payload.phone);
+  }
+  
+  // Validate institution ID
+  if (!isValidIntegerId(payload.institutionId)) {
+    throw new ValidationError('Invalid institution ID format', 'institutionId');
+  }
+  
+  const result = await db.insert(students).values({ 
+    ...payload, 
+    institutionId: parseInt(payload.institutionId) 
+  }).returning();
+  
+  res.status(201).json(decamelize(result[0]));
+}));
 
 app.get('/v1/private/:tenant_slug/admin/staff', requireAuth, resolveTenant, async (req, res) => {
   try {
@@ -665,15 +895,44 @@ app.get('/v1/private/:tenant_slug/admin/staff', requireAuth, resolveTenant, asyn
   }
 });
 
-app.post('/v1/private/:tenant_slug/admin/staff', requireAuth, resolveTenant, async (req, res) => {
-  try {
-    const result = await db.insert(staff).values({ ...camelize(req.body), institutionId: req.tenantId }).returning();
-    res.status(201).json(decamelize(result[0]));
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: 'Internal Server Error' });
+app.post('/v1/private/:tenant_slug/admin/staff', asyncHandler(async (req, res) => {
+  const payload = camelize(req.body);
+  
+  // Validate required fields for staff
+  const validation = validateRequiredFields(payload, ['fullName', 'institutionId']);
+  if (!validation.valid) {
+    throw new ValidationError(`Missing required fields: ${validation.missing.join(', ')}`);
   }
-});
+  
+  // Sanitize string inputs
+  if (typeof payload.fullName === 'string') {
+    payload.fullName = sanitizeString(payload.fullName);
+  }
+  if (typeof payload.address === 'string') {
+    payload.address = sanitizeString(payload.address);
+  }
+  if (typeof payload.phone === 'string') {
+    if (!isValidPhone(payload.phone)) {
+      throw new ValidationError('Invalid phone number format', 'phone');
+    }
+    payload.phone = sanitizeString(payload.phone);
+  }
+  if (typeof payload.position === 'string') {
+    payload.position = sanitizeString(payload.position);
+  }
+  
+  // Validate institution ID
+  if (!isValidIntegerId(payload.institutionId)) {
+    throw new ValidationError('Invalid institution ID format', 'institutionId');
+  }
+  
+  const result = await db.insert(staff).values({ 
+    ...payload, 
+    institutionId: parseInt(payload.institutionId) 
+  }).returning();
+  
+  res.status(201).json(decamelize(result[0]));
+}));
 
 app.get('/v1/private/:tenant_slug/admin/content', requireAuth, resolveTenant, async (req, res) => {
   try {
@@ -685,26 +944,59 @@ app.get('/v1/private/:tenant_slug/admin/content', requireAuth, resolveTenant, as
   }
 });
 
-app.post('/v1/private/:tenant_slug/admin/content', requireAuth, resolveTenant, async (req, res) => {
-  try {
-    const result = await db.insert(content).values(camelize(req.body)).returning();
-    res.status(201).json(decamelize(result[0]));
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: 'Internal Server Error' });
+app.post('/v1/private/:tenant_slug/admin/content', asyncHandler(async (req, res) => {
+  const payload = camelize(req.body);
+  
+  // Validate required fields for content
+  const validation = validateRequiredFields(payload, ['title', 'content']);
+  if (!validation.valid) {
+    throw new ValidationError(`Missing required fields: ${validation.missing.join(', ')}`);
   }
-});
+  
+  // Sanitize string inputs
+  if (typeof payload.title === 'string') {
+    payload.title = sanitizeString(payload.title);
+  }
+  if (typeof payload.content === 'string') {
+    payload.content = sanitizeString(payload.content);
+  }
+  if (typeof payload.contentType === 'string') {
+    payload.contentType = sanitizeString(payload.contentType);
+  }
+  
+  const result = await db.insert(content).values(payload).returning();
+  res.status(201).json(decamelize(result[0]));
+}));
 
-app.put('/v1/private/:tenant_slug/admin/content/:id', requireAuth, resolveTenant, async (req, res) => {
-  try {
-    const id = parseInt(req.params.id);
-    const result = await db.update(content).set(camelize(req.body)).where(eq(content.id, id)).returning();
-    res.json(decamelize(result[0] || {}));
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: 'Internal Server Error' });
+app.put('/v1/private/:tenant_slug/admin/content/:id', asyncHandler(async (req, res) => {
+  const id = parseInt(req.params.id);
+  
+  // Validate ID
+  if (isNaN(id) || id <= 0) {
+    throw new ValidationError('Invalid content ID', 'id');
   }
-});
+  
+  const payload = camelize(req.body);
+  
+  // Sanitize string inputs
+  if (typeof payload.title === 'string') {
+    payload.title = sanitizeString(payload.title);
+  }
+  if (typeof payload.content === 'string') {
+    payload.content = sanitizeString(payload.content);
+  }
+  if (typeof payload.contentType === 'string') {
+    payload.contentType = sanitizeString(payload.contentType);
+  }
+  
+  const result = await db.update(content).set(payload).where(eq(content.id, id)).returning();
+  
+  if (!result.length) {
+    throw new ValidationError('Content not found', 'id');
+  }
+  
+  res.json(decamelize(result[0]));
+}));
 
 app.get('/v1/private/:tenant_slug/admin/statistics', requireAuth, resolveTenant, async (req, res) => {
   try {
@@ -801,33 +1093,38 @@ if (!fs.existsSync(BACKUP_DIR)) {
   fs.mkdirSync(BACKUP_DIR);
 }
 
-app.post('/api/page/save', express.json({limit: '50mb'}), (req, res) => {
-  try {
-    const { html, pathname } = req.body;
-    if (!html) return res.status(400).json({error: 'No HTML provided'});
-    
-    let filename = 'index.html';
-    if (pathname && (pathname.includes('/tpq') || pathname.includes('/mdt') || pathname.includes('/ra') || pathname.includes('/rtq'))) {
-      if (pathname.includes('pendaftaran.html')) filename = 'tenant-pendaftaran.html';
-      else filename = 'tenant-landing.html';
-    }
-    
-    const indexPath = path.join(__dirname, filename);
-    
-    // Create backup
-    if (fs.existsSync(indexPath)) {
-      const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-      fs.copyFileSync(indexPath, path.join(BACKUP_DIR, `${filename}-${timestamp}.html`));
-    }
-    
-    // Save new html
-    fs.writeFileSync(indexPath, html, 'utf8');
-    res.json({success: true});
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({error: 'Failed to save page'});
+app.post('/api/page/save', express.json({limit: '50mb'}), asyncHandler(async (req, res) => {
+  const { html, pathname } = req.body;
+  
+  // Validate required fields
+  if (!html) {
+    throw new ValidationError('No HTML provided');
   }
-});
+  
+  // Sanitize pathname if provided
+  let sanitizedPathname = '';
+  if (pathname) {
+    sanitizedPathname = sanitizeString(pathname);
+  }
+  
+  let filename = 'index.html';
+  if (sanitizedPathname && (sanitizedPathname.includes('/tpq') || sanitizedPathname.includes('/mdt') || sanitizedPathname.includes('/ra') || sanitizedPathname.includes('/rtq'))) {
+    if (sanitizedPathname.includes('pendaftaran.html')) filename = 'tenant-pendaftaran.html';
+    else filename = 'tenant-landing.html';
+  }
+  
+  const indexPath = path.join(__dirname, filename);
+  
+  // Create backup
+  if (fs.existsSync(indexPath)) {
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+    fs.copyFileSync(indexPath, path.join(BACKUP_DIR, `${filename}-${timestamp}.html`));
+  }
+  
+  // Save new html
+  fs.writeFileSync(indexPath, html, 'utf8');
+  res.json({success: true});
+}));
 
 app.get('/api/page/backups', (req, res) => {
   try {

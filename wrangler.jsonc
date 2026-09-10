@@ -1,0 +1,36 @@
+{
+  "name": "edu-platform-workers",
+  "main": "src/workers/index.ts",
+  "compatibility_date": "2025-02-04",
+  "compatibility_flags": ["nodejs_compat"],
+  "observability": {
+    "enabled": true,
+    "head_sampling_rate": 1
+  },
+  "ai": {
+    "binding": "AI"
+  },
+  "vars": {
+    "ENVIRONMENT": "development"
+  },
+  "env": {
+    "production": {
+      "route": {
+        "pattern": "edu-platform.example.com/*",
+        "zone_name": "example.com"
+      },
+      "vars": {
+        "ENVIRONMENT": "production"
+      }
+    },
+    "staging": {
+      "route": {
+        "pattern": "staging.edu-platform.example.com/*",
+        "zone_name": "example.com"
+      },
+      "vars": {
+        "ENVIRONMENT": "staging"
+      }
+    }
+  }
+}
